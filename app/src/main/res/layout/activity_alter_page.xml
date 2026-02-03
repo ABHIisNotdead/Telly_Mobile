@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".AlterPage">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="Alter Masters"
+            app:titleTextColor="?attr/colorOnPrimary"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            android:background="?attr/colorPrimary"/>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Accounting Masters"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="18sp"
+                android:layout_marginBottom="12dp"
+                android:textStyle="bold"/>
+
+            <Button
+                android:id="@+id/btnAltGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Group"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltLedger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ledger"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltCurrency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Currency"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltVoucherType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Voucher Type"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Inventory Masters"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"
+                android:layout_marginTop="16dp"/>
+
+            <Button
+                android:id="@+id/btnAltStockGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Stock Group"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltStockCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Stock Category"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltStockItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Stock Item"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+            <Button
+                android:id="@+id/btnAltUnits"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Units"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp"/>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

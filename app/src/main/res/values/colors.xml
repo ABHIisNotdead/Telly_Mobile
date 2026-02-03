@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Modern Color Palette -->
+    <color name="primary">#6200EE</color>
+    <color name="primary_variant">#3700B3</color>
+    <color name="secondary">#03DAC6</color>
+    <color name="secondary_variant">#018786</color>
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="error">#B00020</color>
+    
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#000000</color>
+    <color name="on_background">#000000</color>
+    <color name="on_surface">#000000</color>
+    <color name="on_error">#FFFFFF</color>
+    
+    <!-- Ocean Theme -->
+    <color name="ocean_primary">#0277BD</color>
+    <color name="ocean_primary_variant">#01579B</color>
+    <color name="ocean_secondary">#26C6DA</color>
+    
+    <!-- Sunset Theme -->
+    <color name="sunset_primary">#FF5722</color>
+    <color name="sunset_primary_variant">#E64A19</color>
+    <color name="sunset_secondary">#FFC107</color>
+    
+    <!-- Nature Theme -->
+    <color name="nature_primary">#4CAF50</color>
+    <color name="nature_primary_variant">#388E3C</color>
+    <color name="nature_secondary">#8BC34A</color>
+    
+    <!-- Night Theme -->
+    <color name="night_primary">#212121</color>
+    <color name="night_primary_variant">#000000</color>
+    <color name="night_secondary">#BB86FC</color>
+    <color name="night_background">#121212</color>
+    <color name="night_surface">#1E1E1E</color>
+    <color name="night_on_surface">#FFFFFF</color>
+
+    <color name="card_stroke">#E0E0E0</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+</resources>

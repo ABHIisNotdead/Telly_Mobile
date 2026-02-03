@@ -1,0 +1,86 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.TellyMobile" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorSecondaryVariant">@color/secondary_variant</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorError">@color/error</item>
+        
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorOnBackground">@color/on_background</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnError">@color/on_error</item>
+        
+        <!-- Status Bar -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+
+    <style name="Theme.TellyMobile" parent="Base.Theme.TellyMobile" />
+
+    <style name="Theme.TellyMobile.Ocean" parent="Base.Theme.TellyMobile">
+        <item name="colorPrimary">@color/ocean_primary</item>
+        <item name="colorPrimaryVariant">@color/ocean_primary_variant</item>
+        <item name="colorSecondary">@color/ocean_secondary</item>
+        <item name="android:statusBarColor">@color/ocean_primary_variant</item>
+    </style>
+
+    <style name="Theme.TellyMobile.Sunset" parent="Base.Theme.TellyMobile">
+        <item name="colorPrimary">@color/sunset_primary</item>
+        <item name="colorPrimaryVariant">@color/sunset_primary_variant</item>
+        <item name="colorSecondary">@color/sunset_secondary</item>
+        <item name="android:statusBarColor">@color/sunset_primary_variant</item>
+    </style>
+
+    <style name="Theme.TellyMobile.Nature" parent="Base.Theme.TellyMobile">
+        <item name="colorPrimary">@color/nature_primary</item>
+        <item name="colorPrimaryVariant">@color/nature_primary_variant</item>
+        <item name="colorSecondary">@color/nature_secondary</item>
+        <item name="android:statusBarColor">@color/nature_primary_variant</item>
+    </style>
+
+    <style name="Theme.TellyMobile.Night" parent="Base.Theme.TellyMobile">
+        <item name="colorPrimary">@color/night_primary</item>
+        <item name="colorPrimaryVariant">@color/night_primary_variant</item>
+        <item name="colorSecondary">@color/night_secondary</item>
+        <item name="android:colorBackground">@color/night_background</item>
+        <item name="colorSurface">@color/night_surface</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnSecondary">#000000</item>
+        <item name="colorOnBackground">@color/night_on_surface</item>
+        <item name="colorOnSurface">@color/night_on_surface</item>
+        <item name="android:statusBarColor">@color/night_primary_variant</item>
+    </style>
+    
+    <!-- Card Style -->
+    <style name="DashboardCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <!-- Page Title Style -->
+    <style name="PageTitle">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Section Header Style -->
+    <style name="SectionHeader">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+
+</resources>

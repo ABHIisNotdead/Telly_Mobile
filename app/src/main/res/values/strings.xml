@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Telly Mobile</string>
+
+    <string name="create_new_ledger">Create New Ledger</string>
+    <string name="basic_details">Basic Details</string>
+    <string name="ledger_name_e_g_rahul_traders">Ledger Name (e.g. Rahul Traders)</string>
+    <string name="under_group">Under Group</string>
+    <string name="mailing_amp_tax_details">Mailing &amp; Tax Details</string>
+    <string name="mobile_number">Mobile Number</string>
+    <string name="EMail_Address">Email Address</string>
+    <string name="address">Address</string>
+    <string name="gstin_optional">GSTIN (Optional)</string>
+    <string name="opening_balance">Opening Balance</string>
+    <string name="amount">Amount</string>
+    <string name="_0_00">0.00</string>
+    <string name="dr">Dr</string>
+    <string name="cr">Cr</string>
+    <string name="save_ledger">Save Ledger</string>
+</resources>

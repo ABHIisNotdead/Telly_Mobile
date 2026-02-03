@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_theme"
+        android:title="Change Theme"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_messages"
+        android:title="Notifications / Messages"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_backup"
+        android:title="Backup DB"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_restore"
+        android:title="Restore DB"
+        app:showAsAction="never" />
+</menu>

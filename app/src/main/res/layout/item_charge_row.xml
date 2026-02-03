@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tvChargeName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="CGST 9%"
+        android:textSize="14sp"
+        android:textColor="@color/on_surface"/>
+
+    <TextView
+        android:id="@+id/tvChargeValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="9%"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginEnd="8dp"/>
+
+    <TextView
+        android:id="@+id/tvChargeAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="₹100.00"
+        android:textStyle="bold"
+        android:textColor="@color/on_surface"
+        android:layout_marginEnd="8dp"/>
+
+    <ImageButton
+        android:id="@+id/btnRemoveCharge"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_launcher_foreground" 
+        android:tint="@android:color/holo_red_dark"
+        android:contentDescription="Remove Charge"/>
+        <!-- Using placeholder icon, ideally ic_delete -->
+
+</LinearLayout>

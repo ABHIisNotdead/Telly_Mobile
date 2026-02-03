@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="595dp"
+    android:layout_height="842dp"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tax Invoice"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"/>
+
+    <!-- Header Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Row 1: Seller & Invoice Details -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Seller -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="5dp">
+                <TextView android:text="Seller:" android:textStyle="bold" android:textSize="8sp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SHREE AMBEY PACKAGING"
+                    android:textStyle="bold"
+                    android:textSize="12sp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gala No 16, Building No 1\nUnit No 1, Rajprabha Udyog Nagar\nVasai East\nMob: 9822922236"
+                    android:textSize="9sp"/>
+                <TextView
+                    android:id="@+id/tvSellerPan"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PAN: XXXXX0000X"
+                    android:textSize="9sp"/>
+            </LinearLayout>
+            
+            <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#000000"/>
+
+            <!-- Invoice Details -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="5dp">
+                <TextView android:text="Invoice Details:" android:textStyle="bold" android:textSize="8sp"/>
+                <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                     <TextView android:text="Invoice No: " android:textSize="9sp"/>
+                     <TextView android:id="@+id/tvInvoiceNo" android:text="001" android:textStyle="bold" android:textSize="9sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+                <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                     <TextView android:text="Date: " android:textSize="9sp"/>
+                     <TextView android:id="@+id/tvDate" android:text="28-Jan-2026" android:textStyle="bold" android:textSize="9sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000"/>
+
+        <!-- Row 2: Buyer & Consignee -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Buyer (Bill To) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="5dp">
+                <TextView android:text="Bill To (Buyer):" android:textStyle="bold" android:textSize="8sp"/>
+                <TextView
+                    android:id="@+id/tvCustomerName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Buyer Name"
+                    android:textStyle="bold"
+                    android:textSize="10sp"/>
+                <TextView
+                    android:id="@+id/tvBuyerAddress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Address..."
+                    android:textSize="9sp"/>
+                <TextView
+                    android:id="@+id/tvBuyerGst"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GSTIN: "
+                    android:textSize="9sp"/>
+                <TextView
+                    android:id="@+id/tvBuyerState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="State: "
+                    android:textSize="9sp"/>
+            </LinearLayout>
+
+            <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#000000"/>
+
+            <!-- Consignee (Ship To) -->
+             <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="5dp">
+                <TextView android:text="Ship To (Consignee):" android:textStyle="bold" android:textSize="8sp"/>
+                <TextView
+                    android:id="@+id/tvConsigneeName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Consignee Name"
+                    android:textStyle="bold"
+                    android:textSize="10sp"/>
+                <TextView
+                    android:id="@+id/tvConsigneeAddress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Address..."
+                    android:textSize="9sp"/>
+                <TextView
+                    android:id="@+id/tvConsigneeGst"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GSTIN: "
+                    android:textSize="9sp"/>
+                 <TextView
+                    android:id="@+id/tvConsigneeState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="State: "
+                    android:textSize="9sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000"/>
+
+        <!-- Row 3: Dispatch Details -->
+         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+            
+            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:text="Delivery Note: " android:textSize="8sp" android:layout_width="60dp"/>
+                <TextView android:id="@+id/tvDeliveryNote" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+                <TextView android:text="Mode/Terms Payment: " android:textSize="8sp" android:layout_width="90dp"/>
+                <TextView android:id="@+id/tvModePayment" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+            </LinearLayout>
+            
+            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:text="Reference No: " android:textSize="8sp" android:layout_width="60dp"/>
+                <TextView android:id="@+id/tvRefNo" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+                <TextView android:text="Other Refs: " android:textSize="8sp" android:layout_width="90dp"/>
+                <TextView android:id="@+id/tvOtherRef" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+            </LinearLayout>
+            
+            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:text="Buyer Order No: " android:textSize="8sp" android:layout_width="60dp"/>
+                <TextView android:id="@+id/tvBuyerOrderNo" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+                <TextView android:text="Dated: " android:textSize="8sp" android:layout_width="90dp"/>
+                <TextView android:id="@+id/tvOrderDate" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+            </LinearLayout>
+            
+            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:text="Dispatch Doc No: " android:textSize="8sp" android:layout_width="60dp"/>
+                <TextView android:id="@+id/tvDispatchDocNo" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+                <TextView android:text="Dispatch Through: " android:textSize="8sp" android:layout_width="90dp"/>
+                <TextView android:id="@+id/tvDispatchThrough" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+            </LinearLayout>
+            
+             <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:text="Destination: " android:textSize="8sp" android:layout_width="60dp"/>
+                <TextView android:id="@+id/tvDestination" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+                <TextView android:text="Terms of Delivery: " android:textSize="8sp" android:layout_width="90dp"/>
+                <TextView android:id="@+id/tvTermsDelivery" android:text="" android:textSize="8sp" android:layout_weight="1" android:layout_width="0dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000" android:layout_marginTop="10dp"/>
+
+    <!-- Table Header (Updated Columns) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="5dp">
+
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="0.4" android:text="Sl No" android:textSize="9sp" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="3" android:text="Description of Goods" android:textSize="9sp" android:textStyle="bold"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Rate" android:textSize="9sp" android:textStyle="bold" android:gravity="end"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="0.8" android:text="Qty" android:textSize="9sp" android:textStyle="bold" android:gravity="end"/>
+         <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="0.6" android:text="Per" android:textSize="9sp" android:textStyle="bold" android:gravity="center"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2" android:text="Amount" android:textSize="9sp" android:textStyle="bold" android:gravity="end"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="CGST" android:textSize="9sp" android:textStyle="bold" android:gravity="end"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="SGST" android:textSize="9sp" android:textStyle="bold" android:gravity="end"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000"/>
+
+    <!-- Items Container -->
+    <LinearLayout
+        android:id="@+id/llItemsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <!-- Items added dynamically -->
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000"/>
+
+    <!-- Total Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="5dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="7" android:text="Subtotal (Taxable):" android:gravity="end" android:layout_marginRight="10dp" android:textSize="10sp"/>
+            <TextView android:id="@+id/tvPdfSubtotal" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.5" android:text="₹0.00" android:gravity="end" android:textSize="10sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="7" android:text="Add: Total Tax (CGST+SGST):" android:gravity="end" android:layout_marginRight="10dp" android:textSize="10sp"/>
+            <TextView android:id="@+id/tvPdfTotalTax" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.5" android:text="₹0.00" android:gravity="end" android:textSize="10sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="7" android:text="Add: Other Charges:" android:gravity="end" android:layout_marginRight="10dp" android:textSize="10sp"/>
+            <TextView android:id="@+id/tvPdfDelivery" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.5" android:text="₹0.00" android:gravity="end" android:textSize="10sp"/>
+        </LinearLayout>
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="7" android:text="Round Off:" android:gravity="end" android:layout_marginRight="10dp" android:textSize="10sp"/>
+            <TextView android:id="@+id/tvRoundOff" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.5" android:text="₹0.00" android:gravity="end" android:textSize="10sp"/>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000" android:layout_marginVertical="2dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="7" android:text="Grand Total:" android:textStyle="bold" android:gravity="end" android:layout_marginRight="10dp"/>
+            <TextView android:id="@+id/tvTotal" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.5" android:text="₹0.00" android:textStyle="bold" android:gravity="end"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#000000" android:layout_marginBottom="5dp"/>
+
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="5dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Amount Chargeable (in words):"
+            android:textSize="9sp"/>
+        <TextView
+            android:id="@+id/tvAmountWords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="INR Zero Only"
+            android:textStyle="bold"
+            android:textSize="10sp"
+            android:layout_marginBottom="5dp"/>
+            
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tax Amount (in words):"
+            android:textSize="9sp"/>
+        <TextView
+            android:id="@+id/tvTaxWords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="INR Zero Only"
+            android:textStyle="bold"
+            android:textSize="10sp"
+            android:layout_marginBottom="5dp"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This is a Computer Generated Invoice"
+        android:gravity="center"
+        android:textSize="10sp"
+        android:layout_marginBottom="10dp"/>
+
+</LinearLayout>
