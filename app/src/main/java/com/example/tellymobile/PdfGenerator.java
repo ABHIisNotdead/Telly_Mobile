@@ -5,31 +5,60 @@ import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Environment;
-import android.util.DisplayMetrics;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.content.FileProvider;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PdfGenerator {
 
     private Context context;
+    private static final String TAG = "PdfGenerator";
+    
+    // Page Config (A4)
+    private static final int PAGE_WIDTH = 595;
+    private static final int PAGE_HEIGHT = 842;
+    private static final int MARGIN = 20;
+    
+    private Paint textPaint;
+    private Paint linePaint;
 
     public PdfGenerator(Context context) {
         this.context = context;
+        initPaints();
     }
 
+    private void initPaints() {
+        textPaint = new Paint();
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(10f); // Default font size
+        textPaint.setAntiAlias(true);
+
+        linePaint = new Paint();
+        linePaint.setColor(Color.BLACK);
+        linePaint.setStrokeWidth(0.5f);
+        linePaint.setStyle(Paint.Style.STROKE);
+    }
+    
     private void showToast(final String message) {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
@@ -37,219 +66,210 @@ public class PdfGenerator {
     }
 
     public void generateAndOpenPdf(Invoice invoice) {
-        try {
-            // Inflate layout
-            View view = LayoutInflater.from(context).inflate(R.layout.print_invoice_layout, null);
+        new Thread(() -> {
+            try {
+                // 1. Get Workbook from ExcelGenerator
+                ExcelGenerator excelGen = new ExcelGenerator(context);
+                Workbook workbook = excelGen.createWorkbook(invoice);
+                
+                // 2. Create PDF
+                PdfDocument document = new PdfDocument();
+                
+                // 3. Render Workbook to PDF
+                renderWorkbookToPdf(workbook, document);
+                
+                // 4. Save
+                String fileName = "Invoice_" + invoice.getInvoiceNumber() + ".pdf";
+                File file = savePdf(document, fileName);
+                
+                document.close();
+                workbook.close();
+                
+                // 5. Open
+                showToast("PDF Saved: " + file.getAbsolutePath());
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> openPdf(file));
 
-            // Populate Data
-            TextView tvCustomer = view.findViewById(R.id.tvCustomerName);
-            TextView tvInvoiceNo = view.findViewById(R.id.tvInvoiceNo);
-            TextView tvDate = view.findViewById(R.id.tvDate);
-            TextView tvSellerPan = view.findViewById(R.id.tvSellerPan); // Added
-            
-            // New Fields Binding
-            TextView tvBuyerAddress = view.findViewById(R.id.tvBuyerAddress);
-            TextView tvBuyerGst = view.findViewById(R.id.tvBuyerGst);
-            TextView tvBuyerState = view.findViewById(R.id.tvBuyerState);
-            
-            TextView tvConsigneeName = view.findViewById(R.id.tvConsigneeName);
-            TextView tvConsigneeAddress = view.findViewById(R.id.tvConsigneeAddress);
-            TextView tvConsigneeGst = view.findViewById(R.id.tvConsigneeGst);
-            TextView tvConsigneeState = view.findViewById(R.id.tvConsigneeState);
-            
-            TextView tvDeliveryNote = view.findViewById(R.id.tvDeliveryNote);
-            TextView tvModePayment = view.findViewById(R.id.tvModePayment);
-            TextView tvRefNo = view.findViewById(R.id.tvRefNo);
-            TextView tvOtherRef = view.findViewById(R.id.tvOtherRef);
-            TextView tvBuyerOrderNo = view.findViewById(R.id.tvBuyerOrderNo);
-            TextView tvOrderDate = view.findViewById(R.id.tvOrderDate);
-            TextView tvDispatchDocNo = view.findViewById(R.id.tvDispatchDocNo);
-            TextView tvDispatchThrough = view.findViewById(R.id.tvDispatchThrough);
-            TextView tvDestination = view.findViewById(R.id.tvDestination);
-            TextView tvTermsDelivery = view.findViewById(R.id.tvTermsDelivery);
-
-            TextView tvPdfSubtotal = view.findViewById(R.id.tvPdfSubtotal);
-            TextView tvPdfTotalTax = view.findViewById(R.id.tvPdfTotalTax);
-            TextView tvPdfDelivery = view.findViewById(R.id.tvPdfDelivery);
-            TextView tvRoundOff = view.findViewById(R.id.tvRoundOff); // Added
-            TextView tvTotal = view.findViewById(R.id.tvTotal);
-            
-            TextView tvAmountWords = view.findViewById(R.id.tvAmountWords);
-            TextView tvTaxWords = view.findViewById(R.id.tvTaxWords); // Added
-            LinearLayout itemsContainer = view.findViewById(R.id.llItemsContainer);
-            
-            if (invoice == null) throw new RuntimeException("Invoice object is null");
-
-            if (tvCustomer != null) tvCustomer.setText(invoice.getCustomerName());
-            if (tvInvoiceNo != null) tvInvoiceNo.setText(invoice.getInvoiceNumber());
-            if (tvDate != null) tvDate.setText(invoice.getDate());
-            
-            // Populate New Fields
-            if (tvBuyerAddress != null) tvBuyerAddress.setText(checkNull(invoice.getBuyerAddress()));
-            if (tvBuyerGst != null) tvBuyerGst.setText("GSTIN: " + checkNull(invoice.getBuyerGst()));
-            if (tvBuyerState != null) tvBuyerState.setText("State: " + checkNull(invoice.getBuyerState()));
-            
-            if (tvConsigneeName != null) tvConsigneeName.setText(checkNull(invoice.getConsigneeName()));
-            if (tvConsigneeAddress != null) tvConsigneeAddress.setText(checkNull(invoice.getConsigneeAddress()));
-            if (tvConsigneeGst != null) tvConsigneeGst.setText("GSTIN: " + checkNull(invoice.getConsigneeGst()));
-            if (tvConsigneeState != null) tvConsigneeState.setText("State: " + checkNull(invoice.getConsigneeState()));
-            
-            if (tvDeliveryNote != null) tvDeliveryNote.setText(checkNull(invoice.getDeliveryNote()));
-            if (tvModePayment != null) tvModePayment.setText(checkNull(invoice.getModeOfPayment()));
-            if (tvRefNo != null) tvRefNo.setText(checkNull(invoice.getReferenceNo()));
-            if (tvOtherRef != null) tvOtherRef.setText(checkNull(invoice.getOtherReferences()));
-            if (tvBuyerOrderNo != null) tvBuyerOrderNo.setText(checkNull(invoice.getBuyersOrderNo()));
-            if (tvOrderDate != null) tvOrderDate.setText(checkNull(invoice.getDeliveryNoteDate())); // Mapping Delivery Note Date here
-            if (tvDispatchDocNo != null) tvDispatchDocNo.setText(checkNull(invoice.getDispatchDocNo()));
-            if (tvDispatchThrough != null) tvDispatchThrough.setText(checkNull(invoice.getDispatchThrough()));
-            if (tvDestination != null) tvDestination.setText(checkNull(invoice.getDestination()));
-            if (tvTermsDelivery != null) tvTermsDelivery.setText(checkNull(invoice.getTermsOfDelivery()));
-            
-            // Footer Totals
-            if (tvPdfSubtotal != null) tvPdfSubtotal.setText("₹" + String.format("%.2f", invoice.getTotalAmount())); 
-            double delivery = invoice.getDeliveryCharges();
-            double totalTax = invoice.getTotalTaxAmount();
-            if (tvPdfTotalTax != null) tvPdfTotalTax.setText("₹" + String.format("%.2f", totalTax));
-            if (tvPdfDelivery != null) tvPdfDelivery.setText("₹" + String.format("%.2f", delivery));
-            
-            double grandTotal = invoice.getGrandTotal();
-            long roundedTotal = Math.round(grandTotal);
-            double roundOff = roundedTotal - grandTotal;
-            
-            if (tvRoundOff != null) tvRoundOff.setText("₹" + String.format("%.2f", roundOff));
-            if (tvTotal != null) tvTotal.setText("₹" + String.format("%.2f", (double)roundedTotal)); // Display rounded total
-
-            // Number to Words
-            if (tvAmountWords != null) tvAmountWords.setText("INR " + convertToWords(roundedTotal) + " Only");
-            if (tvTaxWords != null) tvTaxWords.setText("INR " + convertToWords((long)Math.round(totalTax)) + " Only"); 
-            
-            // Add Items
-            if (invoice != null && invoice.getItems() != null) {
-                int slNo = 1;
-                for (InvoiceItem item : invoice.getItems()) {
-                    View itemView = LayoutInflater.from(context).inflate(R.layout.item_invoice_print_row, null);
-                    TextView tvSlNo = itemView.findViewById(R.id.tvPrintSlNo);
-                    TextView name = itemView.findViewById(R.id.tvPrintName);
-                    TextView rate = itemView.findViewById(R.id.tvPrintRate);
-                    TextView qty = itemView.findViewById(R.id.tvPrintQty);
-                    TextView unit = itemView.findViewById(R.id.tvPrintUnit);
-                    TextView amount = itemView.findViewById(R.id.tvPrintAmount);
-                    TextView cgst = itemView.findViewById(R.id.tvPrintCgst);
-                    TextView sgst = itemView.findViewById(R.id.tvPrintSgst);
-
-                    if (tvSlNo != null) tvSlNo.setText(String.valueOf(slNo++));
-                    if (name != null) name.setText(item.getItemName());
-                    if (rate != null) rate.setText(String.format("%.2f", item.getRate()));
-                    if (qty != null) qty.setText(String.valueOf(item.getQuantity()));
-                    if (unit != null) unit.setText(checkNull(item.getUnit()));
-                    if (amount != null) amount.setText(String.format("%.2f", item.getAmount()));
-                    if (cgst != null) cgst.setText(String.format("%.2f", item.getCgstAmount()));
-                    if (sgst != null) sgst.setText(String.format("%.2f", item.getSgstAmount()));
-                    
-                    itemsContainer.addView(itemView);
-                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                showToast("Error generating PDF: " + e.getMessage());
+                Log.e(TAG, "Error generating PDF", e);
             }
-
-            // Measure & Layout with Scaling
-            DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-            float density = displayMetrics.density;
-            
-            // A4 dimensions in "points" (1/72 inch)
-            int pdfWidthPoints = 595;
-            int pdfHeightPoints = 842;
-            
-            // Scale to pixels for measuring the view (so it looks good on high-res)
-            int measuredWidth = (int) (pdfWidthPoints * density);
-            int measuredHeight = (int) (pdfHeightPoints * density);
-
-            view.measure(View.MeasureSpec.makeMeasureSpec(measuredWidth, View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(measuredHeight, View.MeasureSpec.EXACTLY));
-            view.layout(0, 0, measuredWidth, measuredHeight);
-            
-            // Create PDF
-            PdfDocument document = new PdfDocument();
-            // The page info uses the POINTS dimensions (A4 standard)
-            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(pdfWidthPoints, pdfHeightPoints, 1).create();
-            PdfDocument.Page page = document.startPage(pageInfo);
-            Canvas canvas = page.getCanvas();
-            
-            // Scale the canvas DOWN so the large view fits on the point-sized page
-            canvas.scale(1 / density, 1 / density);
-            
-            view.draw(canvas);
-            document.finishPage(page);
-            
-            // Save File
-            File directory = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Invoices");
-            if (!directory.exists()) {
-                boolean dirCreated = directory.mkdirs();
-                if (!dirCreated) {
-                     throw new IOException("Failed to create directory");
-                }
-            }
-            File file = new File(directory, "Invoice_" + invoice.getInvoiceNumber() + ".pdf");
-
-            FileOutputStream fos = new FileOutputStream(file);
-            document.writeTo(fos);
-            document.close();
-            fos.close();
-            
-            showToast("PDF Saved: " + file.getAbsolutePath());
-            android.util.Log.d("PdfGenerator", "PDF Saved at: " + file.getAbsolutePath());
-            openPdf(file);
-        
-        } catch (Exception e) {
-            e.printStackTrace();
-            android.util.Log.e("PdfGenerator", "Error in PDF Generation", e);
-            String cause = e.getCause() != null ? e.getCause().toString() : "";
-            showToast("Error: " + e.getMessage() + "\nCause: " + cause);
-        }
+        }).start();
     }
 
+    private void renderWorkbookToPdf(Workbook workbook, PdfDocument document) {
+        Sheet sheet = workbook.getSheetAt(0);
+        
+        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create();
+        PdfDocument.Page page = document.startPage(pageInfo);
+        Canvas canvas = page.getCanvas();
+        
+        float currentY = MARGIN;
+        float currentX = MARGIN;
+        
+        // Calculate Column Widths (simple conversion)
+        // POI width is 1/256th of a char width. Lets approximate char width as 6pts?
+        // A better way is to scale "Total Excel Width" to "Page Width - Margins"
+        
+        List<Float> colWidths = new ArrayList<>();
+        int maxCol = 0;
+        // Find max columns
+        for(Row r : sheet) maxCol = Math.max(maxCol, r.getLastCellNum());
+        
+        // Calculate raw widths
+        float totalExcelWidth = 0;
+        for (int i = 0; i < maxCol; i++) {
+            float w = sheet.getColumnWidth(i); // Units of 1/256 char
+            colWidths.add(w);
+            totalExcelWidth += w;
+        }
+        
+        // Scale factor to fit page
+        float printableWidth = PAGE_WIDTH - (2 * MARGIN);
+        float scale = totalExcelWidth > 0 ? printableWidth / totalExcelWidth : 1f;
+        
+        // Convert widths to points
+        List<Float> pdfColWidths = new ArrayList<>();
+        for (float w : colWidths) {
+            pdfColWidths.add(w * scale);
+        }
+
+        // Check for merged regions to skip rendering underlying cells
+        // (Simplified: We just draw the first cell of a merge region with the total dimensions)
+        
+        for (Row row : sheet) {
+            float rowHeight = row.getHeightInPoints();
+            if (rowHeight  == -1) rowHeight = 15f; // Default if undefined
+            
+            // Check Page Break
+            if (currentY + rowHeight > PAGE_HEIGHT - MARGIN) {
+                document.finishPage(page);
+                page = document.startPage(pageInfo);
+                canvas = page.getCanvas();
+                currentY = MARGIN;
+            }
+            
+            currentX = MARGIN;
+            
+            for (int i = 0; i < maxCol; i++) {
+                Cell cell = row.getCell(i);
+                float cellWidth = (i < pdfColWidths.size()) ? pdfColWidths.get(i) : 0;
+                
+                if (cellWidth == 0) continue;
+
+                // Check if this cell is part of a merge
+                CellRangeAddress merge = getMergeRange(sheet, row.getRowNum(), i);
+                
+                if (merge != null) {
+                    // Only draw if we are the top-left cell of the merge
+                    if (merge.getFirstRow() == row.getRowNum() && merge.getFirstColumn() == i) {
+                        float mergedWidth = 0;
+                        float mergedHeight = 0; // Not calculating merged height across rows well here, assuming row-bound for simplicity or just calc width
+                        
+                        // Calculate total width of merge
+                        for (int c = merge.getFirstColumn(); c <= merge.getLastColumn(); c++) {
+                             if(c < pdfColWidths.size()) mergedWidth += pdfColWidths.get(c);
+                        }
+                        
+                        // Note: Merged height across rows is hard without peeking ahead. 
+                        // For simple forms, usually merges are within a row or we just draw the content in the first row's rect.
+                        // Lets basically draw the content with the merged width.
+                        
+                        drawCell(canvas, cell, currentX, currentY, mergedWidth, rowHeight);
+                        
+                    }
+                    // If not top-left, we skip drawing (placeholder)
+                } else {
+                    drawCell(canvas, cell, currentX, currentY, cellWidth, rowHeight);
+                }
+                
+                currentX += cellWidth;
+            }
+            
+            currentY += rowHeight;
+        }
+        
+        document.finishPage(page);
+    }
+    
+    private CellRangeAddress getMergeRange(Sheet sheet, int row, int col) {
+        for (int i = 0; i < sheet.getNumMergedRegions(); i++) {
+            CellRangeAddress range = sheet.getMergedRegion(i);
+            if (range.isInRange(row, col)) {
+                return range;
+            }
+        }
+        return null;
+    }
+    
+    private void drawCell(Canvas canvas, Cell cell, float x, float y, float w, float h) {
+        if (cell == null) return;
+        
+        String text = "";
+        if (cell.getCellType() == CellType.STRING) text = cell.getStringCellValue();
+        else if (cell.getCellType() == CellType.NUMERIC) text = String.valueOf(cell.getNumericCellValue());
+        else if (cell.getCellType() == CellType.BOOLEAN) text = String.valueOf(cell.getBooleanCellValue());
+        else if (cell.getCellType() == CellType.FORMULA) {
+             try { text = cell.getStringCellValue(); } catch (Exception e) { text = String.valueOf(cell.getNumericCellValue()); }
+        }
+        
+        if (!text.isEmpty()) {
+            // Style
+            CellStyle style = cell.getCellStyle();
+            HorizontalAlignment align = style.getAlignment();
+            
+            float textX = x + 2; // Default Left padding
+            float textY = y + h - 5; // Bottom padding approx
+            
+            // Measure text
+            float textWidth = textPaint.measureText(text);
+            
+            if (align == HorizontalAlignment.CENTER) {
+                textX = x + (w - textWidth) / 2;
+            } else if (align == HorizontalAlignment.RIGHT) {
+                textX = x + w - textWidth - 2;
+            }
+            
+            // Draw
+            canvas.drawText(text, textX, textY, textPaint);
+        }
+        
+        // Borders (Simple box for now if borders exist - checking every border is expensive, lets just draw light grid for non-empty cells or all?)
+        // To allow 'clean' look like print layout, maybe only draw if style says so.
+        // For now, drawing all cell bounds helps debugging, but for production, rely on style.
+        // style.getBorderBottom() != BorderStyle.NONE
+        
+        if (cell.getCellStyle().getBorderBottom() != org.apache.poi.ss.usermodel.BorderStyle.NONE) {
+             canvas.drawRect(x, y, x + w, y + h, linePaint);
+        }
+    }
+    
+    private File savePdf(PdfDocument document, String fileName) throws IOException {
+        File directory = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Invoices");
+        if (!directory.exists()) directory.mkdirs();
+        File file = new File(directory, fileName);
+        FileOutputStream fos = new FileOutputStream(file);
+        document.writeTo(fos);
+        fos.close();
+        return file;
+    }
+    
     private void openPdf(File file) {
-        showToast("Opening PDF...");
         try {
             Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-            android.util.Log.d("PdfGenerator", "File URI: " + uri.toString());
-            
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(uri, "application/pdf");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             
-            // Check if there is an app handling this
-            if (intent.resolveActivity(context.getPackageManager()) != null) {
-                context.startActivity(intent);
-            } else {
-                  // Try staring anyway, resolveActivity can sometimes return null on Android 11+ due to package visibility
-                   try {
-                       context.startActivity(intent);
-                   } catch (android.content.ActivityNotFoundException ex) {
-                       showToast("No PDF Viewer installed found to open this file.");
-                   }
+            Intent chooser = Intent.createChooser(intent, "Open PDF with");
+            try {
+                context.startActivity(chooser);
+            } catch (android.content.ActivityNotFoundException ex) {
+                showToast("No app found to open PDF");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            showToast("Error opening PDF: " + e.getMessage());
-            android.util.Log.e("PdfGenerator", "Error opening PDF", e);
+            showToast("Error opening PDF");
         }
-    }
-
-    private String checkNull(String s) {
-        return s == null ? "" : s;
-    }
-    
-    private String convertToWords(long n) {
-        if (n == 0) return "Zero";
-        
-        String[] units = { "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
-        String[] tens = { "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
-  
-        if (n < 0) return "Minus " + convertToWords(-n);
-        if (n < 20) return units[(int)n];
-        if (n < 100) return tens[(int)(n/10)] + ((n % 10 != 0) ? " " : "") + units[(int)(n % 10)];
-        if (n < 1000) return units[(int)(n/100)] + " Hundred" + ((n % 100 != 0) ? " " : "") + convertToWords(n % 100);
-        if (n < 100000) return convertToWords(n / 1000) + " Thousand" + ((n % 1000 != 0) ? " " : "") + convertToWords(n % 1000);
-        if (n < 10000000) return convertToWords(n / 100000) + " Lakh" + ((n % 100000 != 0) ? " " : "") + convertToWords(n % 100000);
-        return convertToWords(n / 10000000) + " Crore" + ((n % 10000000 != 0) ? " " : "") + convertToWords(n % 10000000);
     }
 }

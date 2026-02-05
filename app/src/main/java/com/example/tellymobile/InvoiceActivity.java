@@ -17,10 +17,11 @@ import java.util.List;
 
 public class InvoiceActivity extends BaseActivity {
 
-    private EditText etInvoiceNo, etDate, etItemName, etQuantity, etRate, etGstRate, etUnit;
-    private android.widget.Spinner spnCustomer;
+    private EditText etInvoiceNo, etDate, etQuantity, etRate, etGstRate, etUnit, etHsn;
+    private android.widget.AutoCompleteTextView actvItemName;
+    private android.widget.Spinner spnCustomer, spnBankLedger;
     // Dispatch Fields
-    private EditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etDispatchDocNo, etDeliveryNoteDate, etDispatchThrough, etDestination, etTermsDelivery;
+    private EditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etDispatchDocNo, etDeliveryNoteDate, etDispatchThrough, etDestination, etTermsDelivery, etBillOfLading, etMotorVehicleNo;
     // Party Fields
     private EditText etBuyerAddress, etBuyerGst, etBuyerState;
     private EditText etConsigneeName, etConsigneeAddress, etConsigneeGst, etConsigneeState;
@@ -90,7 +91,11 @@ public class InvoiceActivity extends BaseActivity {
                 int unitIdx = cursor.getColumnIndex("unit");
                 if (unitIdx != -1) unit = cursor.getString(unitIdx);
 
-                InvoiceItem item = new InvoiceItem(name, qty, rate, amount, gstRate, cgst, sgst, unit);
+                String hsn = "";
+                int hsnIdx = cursor.getColumnIndex("hsn");
+                if (hsnIdx != -1) hsn = cursor.getString(hsnIdx);
+
+                InvoiceItem item = new InvoiceItem(name, qty, rate, amount, gstRate, cgst, sgst, unit, hsn);
                 invoiceItemList.add(item);
             }
             cursor.close();
@@ -131,6 +136,30 @@ public class InvoiceActivity extends BaseActivity {
                 if (pos >= 0) spnCustomer.setSelection(pos);
             }
             
+            // Set Bank Spinner Selection
+            int bankIdIdx = cursor.getColumnIndex("bank_ledger_id");
+            if (bankIdIdx != -1) {
+                int bankId = cursor.getInt(bankIdIdx);
+                if (bankId > 0) {
+                     // Need to find name from ID to set spinner, or iterate adapter
+                     // Simplest: Fetch name using helper if available, or just iterate ledgers if cached.
+                     // But we only have ID. Let's get name from DB.
+                     // Helper getLedgerName(id) ? Not standard.
+                     // Or just generic query:
+                     android.database.Cursor bankC = databaseHelper.getLedger(bankId); // Implied method or similar? 
+                     // databaseHelper.getLedger(id) returns cursor.
+                     if (bankC != null && bankC.moveToFirst()) {
+                          String bankName = bankC.getString(bankC.getColumnIndexOrThrow("name"));
+                          bankC.close();
+                          android.widget.ArrayAdapter<String> bAdapter = (android.widget.ArrayAdapter<String>) spnBankLedger.getAdapter();
+                          if (bAdapter != null) {
+                              int pos = bAdapter.getPosition(bankName);
+                              if (pos >= 0) spnBankLedger.setSelection(pos);
+                          }
+                     }
+                }
+            }
+            
             // New Fields
             safeSetText(etDeliveryNote, cursor, "delivery_note");
             safeSetText(etModePayment, cursor, "mode_payment");
@@ -142,6 +171,8 @@ public class InvoiceActivity extends BaseActivity {
             safeSetText(etDispatchThrough, cursor, "dispatch_through");
             safeSetText(etDestination, cursor, "destination");
             safeSetText(etTermsDelivery, cursor, "terms_delivery");
+            safeSetText(etBillOfLading, cursor, "bill_of_lading");
+            safeSetText(etMotorVehicleNo, cursor, "motor_vehicle_no");
             
             safeSetText(etBuyerAddress, cursor, "buyer_address");
             safeSetText(etBuyerGst, cursor, "buyer_gst");
@@ -169,13 +200,14 @@ public class InvoiceActivity extends BaseActivity {
     private void initViews() {
         etInvoiceNo = findViewById(R.id.etInvoiceNo);
         etDate = findViewById(R.id.etDate);
-        spnCustomer = findViewById(R.id.spnCustomer); // Changed from EditText
-        etItemName = findViewById(R.id.etItemName);
+        spnCustomer = findViewById(R.id.spnCustomer);
+        spnBankLedger = findViewById(R.id.spnBankLedger);
+        actvItemName = findViewById(R.id.actvItemName);
         etQuantity = findViewById(R.id.etQuantity);
         etRate = findViewById(R.id.etRate);
-        etRate = findViewById(R.id.etRate);
         etGstRate = findViewById(R.id.etGstRate);
-        etUnit = findViewById(R.id.etUnit); // Added
+        etUnit = findViewById(R.id.etUnit);
+        etHsn = findViewById(R.id.etHsn);
         
         tvSubtotal = findViewById(R.id.tvSubtotal);
         tvGrandTotal = findViewById(R.id.tvGrandTotal);
@@ -195,6 +227,33 @@ public class InvoiceActivity extends BaseActivity {
         android.widget.ArrayAdapter<String> custAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, customers);
         spnCustomer.setAdapter(custAdapter);
         
+        // Populate Bank Spinner
+        List<String> bankLedgers = databaseHelper.getLedgersByGroupList("Bank Accounts");
+        // Optional: Add "Select Bank" or empty first item if optional? Or allow selecting none by clearing?
+        // For Spinner, hard to clear. Let's add "None" or empty string if it's optional.
+        if (bankLedgers.isEmpty()) {
+             // bankLedgers.add("None"); 
+        } else {
+             // bankLedgers.add(0, "None"); // If we want to allow unselecting
+        }
+        // Actually, just standard list.
+        android.widget.ArrayAdapter<String> bankAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, bankLedgers);
+        spnBankLedger.setAdapter(bankAdapter);
+        
+        // Setup Item Autocomplete
+        List<String> itemNames = databaseHelper.getAllItemNames();
+        android.widget.ArrayAdapter<String> itemAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, itemNames);
+        actvItemName.setAdapter(itemAdapter);
+        
+        actvItemName.setOnItemClickListener((parent, view, position, id) -> {
+             String selectedItem = (String) parent.getItemAtPosition(position);
+             double rate = databaseHelper.getItemRate(selectedItem);
+             if(rate > 0) {
+                 etRate.setText(String.valueOf(rate));
+             }
+             // Could also fetch unit, GST if DB helper supports it
+        });
+        
         // ... (Back logic)
         rvInvoiceItems = findViewById(R.id.rvInvoiceItems);
         rvCharges = findViewById(R.id.rvCharges);
@@ -210,6 +269,8 @@ public class InvoiceActivity extends BaseActivity {
         etDispatchThrough = findViewById(R.id.etDispatchThrough);
         etDestination = findViewById(R.id.etDestination);
         etTermsDelivery = findViewById(R.id.etTermsDelivery);
+        etBillOfLading = findViewById(R.id.etBillOfLading);
+        etMotorVehicleNo = findViewById(R.id.etMotorVehicleNo);
         
         // Party Fields
         etBuyerAddress = findViewById(R.id.etBuyerAddress);
@@ -233,7 +294,11 @@ public class InvoiceActivity extends BaseActivity {
     }
 
     private void setupRecyclerViews() {
-        adapter = new InvoiceAdapter(invoiceItemList);
+        adapter = new InvoiceAdapter(invoiceItemList, position -> {
+            invoiceItemList.remove(position);
+            adapter.notifyItemRemoved(position);
+            updateTotals();
+        });
         rvInvoiceItems.setLayoutManager(new LinearLayoutManager(this));
         rvInvoiceItems.setAdapter(adapter);
         
@@ -368,7 +433,7 @@ public class InvoiceActivity extends BaseActivity {
     }
 
     private void addItem() {
-        String name = etItemName.getText().toString();
+        String name = actvItemName.getText().toString();
         String qtyStr = etQuantity.getText().toString();
         String rateStr = etRate.getText().toString();
         String unit = etUnit.getText().toString();
@@ -390,20 +455,24 @@ public class InvoiceActivity extends BaseActivity {
         double taxAmount = taxableValue * (gstRate / 100);
         double cgst = taxAmount / 2;
         double sgst = taxAmount / 2;
+        
+        String hsn = etHsn.getText().toString();
 
-        InvoiceItem item = new InvoiceItem(name, qty, rate, taxableValue, gstRate, cgst, sgst, unit);
+        InvoiceItem item = new InvoiceItem(name, qty, rate, taxableValue, gstRate, cgst, sgst, unit, hsn);
         invoiceItemList.add(item);
         this.adapter.notifyDataSetChanged();
 
         updateTotals();
 
         // Clear item fields
-        etItemName.setText("");
+        actvItemName.setText("");
         etQuantity.setText("");
         etRate.setText("");
-        etUnit.setText(""); // Added
+        etUnit.setText("");
+        etHsn.setText(""); // Added
         etGstRate.setText("0");
-        etItemName.requestFocus();
+        etGstRate.setText("0");
+        actvItemName.requestFocus();
     }
     
     private void updateTotals() {
@@ -462,7 +531,7 @@ public class InvoiceActivity extends BaseActivity {
             // Revert & Save Items
             databaseHelper.deleteInvoiceItems(updateId); 
             for (InvoiceItem item : invoiceItemList) {
-                databaseHelper.addInvoiceItem(updateId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount(), item.getUnit());
+                databaseHelper.addInvoiceItem(updateId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount(), item.getUnit(), item.getHsn());
             }
             
             // Revert & Save Charges
@@ -481,7 +550,7 @@ public class InvoiceActivity extends BaseActivity {
             
             if (savedInvoiceId != -1) {
                 for (InvoiceItem item : invoiceItemList) {
-                    databaseHelper.addInvoiceItem(savedInvoiceId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount(), item.getUnit());
+                    databaseHelper.addInvoiceItem(savedInvoiceId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount(), item.getUnit(), item.getHsn());
                 }
                 // Save Charges
                 for (VoucherCharge charge : chargesList) {
@@ -510,10 +579,24 @@ public class InvoiceActivity extends BaseActivity {
             grandTotalAmount - subtotalAmount - totalChargesAmount, 
             grandTotalAmount
         );
+        
+        // Set Bank Ledger ID
+        if (spnBankLedger.getSelectedItem() != null) {
+            String selectedBank = spnBankLedger.getSelectedItem().toString();
+            android.database.Cursor flags = databaseHelper.getLedgerDetails(selectedBank);
+            if (flags != null && flags.moveToFirst()) {
+                 try {
+                      int idIndex = flags.getColumnIndex("_id");
+                      if(idIndex != -1) invoice.setBankLedgerId(flags.getInt(idIndex));
+                 } catch (Exception e) {}
+                 flags.close();
+            }
+        }
+        
         invoice.setDispatchDetails(etDeliveryNote.getText().toString(), etModePayment.getText().toString(), etRefNo.getText().toString(),
                 etOtherRef.getText().toString(), etBuyerOrderNo.getText().toString(), etDispatchDocNo.getText().toString(),
                 etDeliveryNoteDate.getText().toString(), etDispatchThrough.getText().toString(), etDestination.getText().toString(),
-                etTermsDelivery.getText().toString());
+                etTermsDelivery.getText().toString(), etBillOfLading.getText().toString(), etMotorVehicleNo.getText().toString());
         invoice.setBuyerDetails(etBuyerAddress.getText().toString(), etBuyerGst.getText().toString(), etBuyerState.getText().toString());
         invoice.setConsigneeDetails(etConsigneeName.getText().toString(), etConsigneeAddress.getText().toString(), etConsigneeGst.getText().toString(), etConsigneeState.getText().toString());
         return invoice;

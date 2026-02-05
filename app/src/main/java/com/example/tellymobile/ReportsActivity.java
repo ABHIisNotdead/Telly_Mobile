@@ -44,6 +44,7 @@ import java.util.TreeMap;
 public class ReportsActivity extends BaseActivity {
 
     private BarChart barChart;
+    private com.github.mikephil.charting.charts.HorizontalBarChart stockChart;
     private LineChart lineChart;
     private PieChart pieChart;
     private Spinner spnReportType, spnPeriod;
@@ -72,6 +73,7 @@ public class ReportsActivity extends BaseActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         barChart = findViewById(R.id.barChart);
+        stockChart = findViewById(R.id.stockChart);
         lineChart = findViewById(R.id.lineChart);
         pieChart = findViewById(R.id.pieChart);
         spnReportType = findViewById(R.id.spnReportType);
@@ -119,6 +121,61 @@ public class ReportsActivity extends BaseActivity {
         } else {
             loadTrendChart(type, period);
         }
+        
+        loadStockChart(); // Always load stock chart
+    }
+    
+    private void loadStockChart() {
+        List<BarEntry> entries = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
+        Cursor cursor = databaseHelper.getItemStockSummary();
+        
+        if (cursor != null) {
+            int i = 0;
+            while (cursor.moveToNext()) {
+                String name = cursor.getString(0);
+                float stock = cursor.getFloat(1);
+                // Only show positive stock or all? Let's show all non-zero
+                if (stock != 0) {
+                    entries.add(new BarEntry(i, stock));
+                    labels.add(name);
+                    i++;
+                }
+            }
+            cursor.close();
+        }
+        
+        BarDataSet dataSet = new BarDataSet(entries, "Current Stock Quantity");
+        dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        dataSet.setValueTextColor(Color.BLACK);
+        dataSet.setValueTextSize(12f);
+        
+        BarData data = new BarData(dataSet);
+        data.setBarWidth(0.6f);
+        data.setValueFormatter(new com.github.mikephil.charting.formatter.ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.format(Locale.US, "%.0f", value); // No decimals for quantity typically
+            }
+        });
+        
+        stockChart.setData(data);
+        stockChart.setFitBars(true);
+        stockChart.getDescription().setEnabled(false);
+        stockChart.getLegend().setEnabled(true);
+        stockChart.animateY(1500);
+        
+        XAxis xAxis = stockChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
+        xAxis.setGranularity(1f);
+        xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
+        xAxis.setLabelCount(labels.size());
+        
+        stockChart.getAxisLeft().setDrawGridLines(true);
+        stockChart.getAxisRight().setEnabled(false); // Hide right axis
+        
+        stockChart.invalidate();
     }
     private void loadCategoryChart() {
         pieChart.setVisibility(View.VISIBLE);
@@ -136,15 +193,26 @@ public class ReportsActivity extends BaseActivity {
             cursor.close();
         }
 
-        PieDataSet dataSet = new PieDataSet(entries, "Calculated Sales");
+        PieDataSet dataSet = new PieDataSet(entries, "Sales Distribution");
         dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setValueTextSize(12f);
-
+        dataSet.setValueTextColor(Color.WHITE);
+        dataSet.setValueTextSize(14f);
+        
         PieData data = new PieData(dataSet);
+        data.setValueFormatter(new com.github.mikephil.charting.formatter.ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.format(Locale.US, "%.0f", value);
+            }
+        });
+        
         pieChart.setData(data);
-        pieChart.setDescription(null);
-        pieChart.animateY(1000);
+        pieChart.getDescription().setEnabled(false);
+        pieChart.setCenterText("Sales by\nCategory");
+        pieChart.setCenterTextSize(16f);
+        pieChart.setEntryLabelColor(Color.BLACK);
+        pieChart.animateY(1400, com.github.mikephil.charting.animation.Easing.EaseInOutQuad);
+        pieChart.getLegend().setWordWrapEnabled(true);
         pieChart.invalidate();
     }
     
@@ -154,7 +222,9 @@ public class ReportsActivity extends BaseActivity {
         if (isBar) barChart.setVisibility(View.VISIBLE);
         else lineChart.setVisibility(View.VISIBLE);
 
-        List<DatabaseHelper.VoucherSummary> vouchers = databaseHelper.getAllVouchers();
+        android.content.SharedPreferences prefs = getSharedPreferences("TellyPrefs", MODE_PRIVATE);
+        int companyId = prefs.getInt("selected_company_id", 0);
+        List<DatabaseHelper.VoucherSummary> vouchers = databaseHelper.getAllVouchers(companyId);
         Map<String, Float> aggregatedData = new TreeMap<>(); 
         SimpleDateFormat inputFormat1 = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
         SimpleDateFormat inputFormat2 = new SimpleDateFormat("dd-MM-yyyy", Locale.US); 
@@ -195,18 +265,20 @@ public class ReportsActivity extends BaseActivity {
                 i++;
             }
             BarDataSet dataSet = new BarDataSet(entries, type);
+            // Use Telly Mobile Theme Colors if possible, else Material
             dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
             dataSet.setValueTextColor(Color.BLACK);
-            dataSet.setValueTextSize(10f);
+            dataSet.setValueTextSize(12f);
+            
             BarData barData = new BarData(dataSet);
+            barData.setBarWidth(0.6f); // Thinner bars look neater
             barChart.setData(barData);
             
             setupAxis(barChart.getXAxis(), labels);
-            
-            Description description = new Description();
-            description.setText(period + " " + type);
-            barChart.setDescription(description);
-            barChart.animateY(1000);
+            barChart.getAxisLeft().setDrawGridLines(true);
+            barChart.getAxisRight().setEnabled(false);
+            barChart.getDescription().setEnabled(false);
+            barChart.animateY(1200);
             barChart.invalidate();
             
         } else {
@@ -217,19 +289,25 @@ public class ReportsActivity extends BaseActivity {
                 i++;
             }
             LineDataSet dataSet = new LineDataSet(entries, type);
-            dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
-            dataSet.setValueTextColor(Color.BLACK);
-            dataSet.setValueTextSize(10f);
-            dataSet.setLineWidth(2f);
+            dataSet.setColor(Color.BLUE); // Primary Color
+            dataSet.setCircleColor(Color.RED);
+            dataSet.setLineWidth(3f);
+            dataSet.setCircleRadius(5f);
+            dataSet.setDrawCircleHole(true);
+            dataSet.setValueTextSize(12f);
+            dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER); // Smooth curves
+            dataSet.setDrawFilled(true);
+            dataSet.setFillColor(Color.CYAN);
+            dataSet.setFillAlpha(50);
+            
             LineData lineData = new LineData(dataSet);
             lineChart.setData(lineData);
             
             setupAxis(lineChart.getXAxis(), labels);
-            
-            Description description = new Description();
-            description.setText(period + " " + type);
-            lineChart.setDescription(description);
-            lineChart.animateY(1000);
+            lineChart.getAxisLeft().setDrawGridLines(true);
+            lineChart.getAxisRight().setEnabled(false);
+            lineChart.getDescription().setEnabled(false);
+            lineChart.animateX(1200);
             lineChart.invalidate();
         }
     }

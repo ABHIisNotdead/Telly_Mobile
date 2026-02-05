@@ -14,6 +14,17 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.ViewHold
 
     private List<InvoiceItem> invoiceItems;
 
+    public interface OnDeleteListener {
+        void onDelete(int position);
+    }
+    
+    private OnDeleteListener deleteListener;
+    
+    public InvoiceAdapter(List<InvoiceItem> invoiceItems, OnDeleteListener deleteListener) {
+        this.invoiceItems = invoiceItems;
+        this.deleteListener = deleteListener;
+    }
+
     public InvoiceAdapter(List<InvoiceItem> invoiceItems) {
         this.invoiceItems = invoiceItems;
     }
@@ -32,6 +43,13 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.ViewHold
         holder.tvQty.setText(String.valueOf(item.getQuantity()));
         holder.tvRate.setText(String.valueOf(item.getRate()));
         holder.tvAmount.setText(String.valueOf(item.getAmount()));
+        
+        if (holder.btnDelete != null && deleteListener != null) {
+            holder.btnDelete.setOnClickListener(v -> deleteListener.onDelete(position));
+            holder.btnDelete.setVisibility(View.VISIBLE);
+        } else if (holder.btnDelete != null) {
+            holder.btnDelete.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -41,6 +59,7 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.ViewHold
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvItemName, tvQty, tvRate, tvAmount;
+        android.widget.ImageButton btnDelete;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -48,6 +67,7 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.ViewHold
             tvQty = itemView.findViewById(R.id.tvQty);
             tvRate = itemView.findViewById(R.id.tvRate);
             tvAmount = itemView.findViewById(R.id.tvAmount);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
         }
     }
 }

@@ -29,11 +29,21 @@ import android.app.AlertDialog;
 public class VoucherActivity extends BaseActivity {
 
     private Spinner spnVoucherType;
-    private AutoCompleteTextView actvPartyName, actvItemName;
-    private TextInputEditText etVoucherNo, etDate, etQuantity, etRate;
+    private AutoCompleteTextView actvPartyName, actvItemName, actvBankLedger;
+    private TextInputEditText etVoucherNo, etDate, etQuantity, etRate, etUnit, etHsn, etGstRate;
     private TextView tvPartyAddress, tvPartyMobile, tvPartyGst, tvTotalAmount;
+    
+    // Company Header
+    private TextView tvCompanyHeader, tvCompanyAddress, tvCompanyGST;
+    
+    // Dispatch Fields
+    private LinearLayout llDispatchDetails;
+    private Button btnToggleDispatch;
+    private TextInputEditText etDispatchDocNo, etDestination, etDispatchThrough, etMotorVehicleNo;
+    private TextInputEditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etDeliveryNoteDate, etTermsDelivery, etBillOfLading;
+    
     private LinearLayout llPartyInfo, llInventorySection;
-    private Button btnAddItem, btnSave, btnAddCharge;
+    private Button btnAddItem, btnSave, btnAddCharge, btnViewPdf;
     private RecyclerView rvItems, rvCharges;
 
     private DatabaseHelper databaseHelper;
@@ -44,6 +54,10 @@ public class VoucherActivity extends BaseActivity {
     private double totalAmount = 0;
     private double subtotalAmount = 0;
     private double totalChargesAmount = 0;
+    
+    private int selectedCompanyId = 0; // Default 0
+    private static final String PREFS_NAME = "TellyPrefs";
+    private static final String KEY_COMPANY_ID = "selected_company_id";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,9 +70,14 @@ public class VoucherActivity extends BaseActivity {
             chargesList = new ArrayList<>();
 
             initViews();
+            
+            // Load Company Context
+            android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            selectedCompanyId = prefs.getInt(KEY_COMPANY_ID, 0);
+            loadCompanyDetails();
+            
             setupVoucherTypeSpinner();
-            setupAutocompleteAdapters();
-            setupAutocompleteAdapters();
+            setupAutocompleteAdapters(); // TODO: Filter by ID if segregation implemented in future
             setupRecyclerView();
             setupChargesRecyclerView();
             setupListeners();
@@ -98,6 +117,7 @@ public class VoucherActivity extends BaseActivity {
 
         spnVoucherType = findViewById(R.id.spnVoucherType);
         actvPartyName = findViewById(R.id.actvPartyName);
+        actvBankLedger = findViewById(R.id.actvBankLedger);
         etVoucherNo = findViewById(R.id.etVoucherNo);
         etDate = findViewById(R.id.etDate);
         
@@ -106,10 +126,35 @@ public class VoucherActivity extends BaseActivity {
         tvPartyMobile = findViewById(R.id.tvPartyMobile);
         tvPartyGst = findViewById(R.id.tvPartyGst);
         
+        // Company Header
+        tvCompanyHeader = findViewById(R.id.tvCompanyHeader);
+        tvCompanyAddress = findViewById(R.id.tvCompanyAddress);
+        tvCompanyGST = findViewById(R.id.tvCompanyGST);
+        
+        // Dispatch Section
+        llDispatchDetails = findViewById(R.id.llDispatchDetails);
+        btnToggleDispatch = findViewById(R.id.btnToggleDispatch);
+        etDispatchDocNo = findViewById(R.id.etDispatchDocNo);
+        etDestination = findViewById(R.id.etDestination);
+        etDispatchThrough = findViewById(R.id.etDispatchThrough);
+        etMotorVehicleNo = findViewById(R.id.etMotorVehicleNo);
+        
+        etDeliveryNote = findViewById(R.id.etDeliveryNote);
+        etModePayment = findViewById(R.id.etModePayment);
+        etRefNo = findViewById(R.id.etRefNo);
+        etOtherRef = findViewById(R.id.etOtherRef);
+        etBuyerOrderNo = findViewById(R.id.etBuyerOrderNo);
+        etDeliveryNoteDate = findViewById(R.id.etDeliveryNoteDate);
+        etTermsDelivery = findViewById(R.id.etTermsDelivery);
+        etBillOfLading = findViewById(R.id.etBillOfLading);
+        
         llInventorySection = findViewById(R.id.llInventorySection);
         actvItemName = findViewById(R.id.actvItemName);
+        etHsn = findViewById(R.id.etHsn);
         etQuantity = findViewById(R.id.etQuantity);
+        etUnit = findViewById(R.id.etUnit);
         etRate = findViewById(R.id.etRate);
+        etGstRate = findViewById(R.id.etGstRate);
         btnAddItem = findViewById(R.id.btnAddItem);
         rvItems = findViewById(R.id.rvItems);
         
@@ -119,6 +164,32 @@ public class VoucherActivity extends BaseActivity {
         
         tvTotalAmount = findViewById(R.id.tvTotalAmount);
         btnSave = findViewById(R.id.btnSave);
+        btnViewPdf = findViewById(R.id.btnViewPdf);
+    }
+    
+    private void loadCompanyDetails() {
+        if (selectedCompanyId > 0) {
+            Cursor c = databaseHelper.getCompany(selectedCompanyId);
+            if (c != null && c.moveToFirst()) {
+                tvCompanyHeader.setText(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_NAME)));
+                tvCompanyAddress.setText(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_ADDRESS)));
+                tvCompanyGST.setText("GST: " + c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_GST)));
+                
+                String logoUri = c.getString(c.getColumnIndexOrThrow("company_logo")); // Use literal column name if constant check fails
+                android.widget.ImageView ivLogo = findViewById(R.id.ivVoucherCompanyLogo);
+                if (logoUri != null && !logoUri.isEmpty()) {
+                    ivLogo.setVisibility(View.VISIBLE);
+                    ivLogo.setImageURI(android.net.Uri.parse(logoUri));
+                } else {
+                    ivLogo.setVisibility(View.GONE);
+                }
+                c.close();
+            }
+        } else {
+             // Default / No Company Selected
+             tvCompanyHeader.setText("Default Company");
+             tvCompanyAddress.setText("Configure in Settings");
+        }
     }
 
     private void setupVoucherTypeSpinner() {
@@ -141,6 +212,8 @@ public class VoucherActivity extends BaseActivity {
                     long nextNum = databaseHelper.getNextVoucherNumber(type);
                     etVoucherNo.setText(String.valueOf(nextNum));
                 }
+                
+                updatePartyAutocomplete(type);
             }
 
             @Override
@@ -149,10 +222,10 @@ public class VoucherActivity extends BaseActivity {
     }
 
     private void setupAutocompleteAdapters() {
-        // Party Name Autocomplete
-        List<String> partyNames = databaseHelper.getAllLedgerNames();
-        ArrayAdapter<String> partyAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, partyNames);
-        actvPartyName.setAdapter(partyAdapter);
+        // Party Name Autocomplete - Initial Setup handled by Spinner selection
+        // List<String> partyNames = databaseHelper.getAllLedgerNames();
+        // ArrayAdapter<String> partyAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, partyNames);
+        // actvPartyName.setAdapter(partyAdapter);
 
         actvPartyName.setOnItemClickListener((parent, view, position, id) -> {
             String selectedName = (String) parent.getItemAtPosition(position);
@@ -173,6 +246,28 @@ public class VoucherActivity extends BaseActivity {
         });
     }
 
+    private void updatePartyAutocomplete(String type) {
+        List<String> partyNames = new ArrayList<>();
+        if ("Sales".equals(type) || "Receipt".equals(type)) {
+            partyNames.addAll(databaseHelper.getLedgersByGroupList("Sundry Debtors"));
+            partyNames.add("Cash");
+        } else if ("Purchase".equals(type) || "Payment".equals(type)) {
+            partyNames.addAll(databaseHelper.getLedgersByGroupList("Sundry Creditors"));
+            partyNames.add("Cash");
+        } else {
+             // Fallback to all if unknown type
+             partyNames = databaseHelper.getAllLedgerNames(); 
+        }
+        
+        ArrayAdapter<String> partyAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, partyNames);
+        actvPartyName.setAdapter(partyAdapter);
+        
+        // Setup Bank Ledger Adapter
+        List<String> bankLedgers = databaseHelper.getLedgersByGroupList("Bank Accounts");
+        ArrayAdapter<String> bankAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, bankLedgers);
+        actvBankLedger.setAdapter(bankAdapter);
+    }
+
     private void fetchAndPopulatePartyDetails(String name) {
         Cursor cursor = databaseHelper.getLedgerDetails(name);
         if (cursor != null && cursor.moveToFirst()) {
@@ -190,7 +285,12 @@ public class VoucherActivity extends BaseActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new InvoiceAdapter(itemList);
+        adapter = new InvoiceAdapter(itemList, position -> {
+            // Delete Item Logic
+            itemList.remove(position);
+            adapter.notifyItemRemoved(position);
+            updateTotals();
+        });
         rvItems.setLayoutManager(new LinearLayoutManager(this));
         rvItems.setAdapter(adapter);
     }
@@ -205,6 +305,13 @@ public class VoucherActivity extends BaseActivity {
         btnAddItem.setOnClickListener(v -> addItem());
         btnAddCharge.setOnClickListener(v -> showAddChargeDialog());
         btnSave.setOnClickListener(v -> saveVoucher());
+        btnViewPdf.setOnClickListener(v -> viewPdf());
+        
+        btnToggleDispatch.setOnClickListener(v -> {
+            boolean isVisible = llDispatchDetails.getVisibility() == View.VISIBLE;
+            llDispatchDetails.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            btnToggleDispatch.setText(isVisible ? "Show Dispatch Details" : "Hide Dispatch Details");
+        });
     }
 
     private void loadVoucherData(int id, String type) {
@@ -271,8 +378,26 @@ public class VoucherActivity extends BaseActivity {
         }
         
         if (type.equals("Sales")) {
+            // Create Full Invoice Object
+            Invoice inv = createInvoiceObject(voucherNo, date, partyName, itemTaxTotal);
+            
+            // Set Bank Ledger ID
+            String selectedBank = actvBankLedger.getText().toString();
+            if (!selectedBank.isEmpty()) {
+                Cursor flags = databaseHelper.getLedgerDetails(selectedBank);
+                if (flags != null && flags.moveToFirst()) {
+                     try {
+                          int idIndex = flags.getColumnIndex("_id");
+                          if(idIndex != -1) inv.setBankLedgerId(flags.getInt(idIndex));
+                     } catch (Exception e) {}
+                     flags.close();
+                }
+            }
+            
+            result = databaseHelper.addInvoiceObject(inv, selectedCompanyId);
+            
             // Passing subtotal, charges, tax, grand total
-            result = databaseHelper.addInvoice(voucherNo, date, partyName, subtotalAmount, totalChargesAmount, itemTaxTotal, totalAmount);
+            // result = databaseHelper.addInvoice(voucherNo, date, partyName, subtotalAmount, totalChargesAmount, itemTaxTotal, totalAmount);
             if (result != -1) {
                 for (InvoiceItem item : itemList) {
                     databaseHelper.addInvoiceItem(result, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount());
@@ -283,7 +408,7 @@ public class VoucherActivity extends BaseActivity {
                 }
             }
         } else if (type.equals("Purchase")) {
-            result = databaseHelper.addPurchase(voucherNo, date, partyName, totalAmount);
+            result = databaseHelper.addPurchase(voucherNo, date, partyName, totalAmount, selectedCompanyId);
              if (result != -1) {
                 for (InvoiceItem item : itemList) {
                     databaseHelper.addPurchaseItem(result, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount());
@@ -331,7 +456,15 @@ public class VoucherActivity extends BaseActivity {
                      if (sgstIdx != -1) sgst = cursor.getDouble(sgstIdx);
                 }
 
-                itemList.add(new InvoiceItem(name, qty, rate, amount, gst, cgst, sgst));
+                String unit = "";
+                int unitIdx = cursor.getColumnIndex("unit");
+                if (unitIdx != -1) unit = cursor.getString(unitIdx);
+
+                String hsn = "";
+                int hsnIdx = cursor.getColumnIndex("hsn");
+                if (hsnIdx != -1) hsn = cursor.getString(hsnIdx);
+
+                itemList.add(new InvoiceItem(name, qty, rate, amount, gst, cgst, sgst, unit, hsn));
             }
             cursor.close();
             adapter.notifyDataSetChanged();
@@ -367,10 +500,19 @@ public class VoucherActivity extends BaseActivity {
         actvPartyName.setEnabled(false);
         
         actvItemName.setEnabled(false);
+        etHsn.setEnabled(false);
         etQuantity.setEnabled(false);
+        etUnit.setEnabled(false);
         etRate.setEnabled(false);
+        etGstRate.setEnabled(false);
         btnAddItem.setVisibility(View.GONE);
-        btnSave.setVisibility(View.GONE);
+        if (spnVoucherType.getSelectedItem().toString().equals("Sales")) {
+            btnSave.setVisibility(View.GONE);
+            btnViewPdf.setVisibility(View.VISIBLE);
+        } else {
+             btnSave.setVisibility(View.GONE);
+             btnViewPdf.setVisibility(View.GONE); // Or create Pdf for Purchase too later
+        }
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("View Voucher");
@@ -535,10 +677,22 @@ public class VoucherActivity extends BaseActivity {
 
         double qty = Double.parseDouble(qtyStr);
         double rate = Double.parseDouble(rateStr);
-        double amount = qty * rate; // Taxable Value
+        
+        String gstStr = etGstRate.getText().toString();
+        double gstRate = gstStr.isEmpty() ? 0 : Double.parseDouble(gstStr);
+        
+        // Calculate Amounts
+        double amount = qty * rate; // Taxable Vaue
+        
+        // Tax Calculation (Item level)
+        double taxAmount = amount * (gstRate / 100);
+        double cgst = taxAmount / 2;
+        double sgst = taxAmount / 2;
+        
+        String unit = etUnit.getText().toString();
+        String hsn = etHsn.getText().toString();
 
-        // Default 0 for GST in simple Voucher Entry for now, can be enhanced
-        itemList.add(new InvoiceItem(name, qty, rate, amount, 0, 0, 0));
+        itemList.add(new InvoiceItem(name, qty, rate, amount, gstRate, cgst, sgst, unit, hsn));
         adapter.notifyDataSetChanged();
         
         updateTotals();
@@ -546,6 +700,10 @@ public class VoucherActivity extends BaseActivity {
         actvItemName.setText("");
         etQuantity.setText("");
         etRate.setText("");
+        etUnit.setText("");
+        etHsn.setText("");
+        etGstRate.setText("");
+        actvItemName.requestFocus();
     }
 
     private void updateTotals() {
@@ -569,6 +727,47 @@ public class VoucherActivity extends BaseActivity {
         
         totalAmount = subtotalAmount + itemTaxTotal + totalChargesAmount;
         tvTotalAmount.setText(String.format("Total: ₹%.2f", totalAmount));
+    }
+
+    private Invoice createInvoiceObject(String voucherNo, String date, String partyName, double itemTaxTotal) {
+         Invoice inv = new Invoice(voucherNo, date, partyName, itemList, subtotalAmount, totalChargesAmount, itemTaxTotal, totalAmount);
+         
+         inv.setDispatchDetails(
+                etDeliveryNote.getText().toString(),
+                etModePayment.getText().toString(),
+                etRefNo.getText().toString(),
+                etOtherRef.getText().toString(),
+                etBuyerOrderNo.getText().toString(),
+                etDispatchDocNo.getText().toString(),
+                etDeliveryNoteDate.getText().toString(),
+                etDispatchThrough.getText().toString(),
+                etDestination.getText().toString(),
+                etTermsDelivery.getText().toString(),
+                etBillOfLading.getText().toString(),
+                etMotorVehicleNo.getText().toString()
+            );
+            
+         // Fetch Party Details again to ensure they are populated in the object
+         // (Or rely on what's visible in TextViews, but better to get from DB/Cursor if needed)
+         // For now, simple implementation assuming user hasn't changed them manually if they weren't editable
+         
+         return inv;
+    }
+
+    private void viewPdf() {
+         String voucherNo = etVoucherNo.getText().toString();
+         String date = etDate.getText().toString();
+         String partyName = actvPartyName.getText().toString();
+         
+         double itemTaxTotal = 0;
+         for (InvoiceItem item : itemList) {
+            itemTaxTotal += (item.getCgstAmount() + item.getSgstAmount());
+         }
+         
+         Invoice inv = createInvoiceObject(voucherNo, date, partyName, itemTaxTotal);
+         
+         PdfGenerator pdfGenerator = new PdfGenerator(this);
+         pdfGenerator.generateAndOpenPdf(inv);
     }
 
     private void removeCharge(int position) {

@@ -14,7 +14,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private Context context;
     private static final String DATABASE_NAME = "TellyMobile.db";
-    private static final int DATABASE_VERSION = 11; // Incremented for Unit field
+    private static final int DATABASE_VERSION = 17; // Incremented to force schema Fix
 
     // ...
 
@@ -30,6 +30,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_TYPE = "type";
     public static final String COLUMN_TAX_RATE = "tax_rate"; // New
     public static final String COLUMN_IS_PERCENTAGE = "is_percentage"; // New
+    public static final String COLUMN_BANK_NAME = "bank_name";
+    public static final String COLUMN_BANK_ACCOUNT_NO = "bank_account_no";
+    public static final String COLUMN_BANK_IFSC = "bank_ifsc";
+    public static final String COLUMN_BANK_BRANCH = "bank_branch";
+    public static final String COLUMN_COMPANY_ID = "company_id"; // Global Company ID
+
+    // Companies Table
+    public static final String TABLE_COMPANIES = "companies";
+    public static final String COLUMN_COMPANY_NAME = "company_name";
+    public static final String COLUMN_COMPANY_ADDRESS = "company_address";
+    public static final String COLUMN_COMPANY_MOBILE = "company_mobile";
+    public static final String COLUMN_COMPANY_PHONE2 = "company_phone2"; // New
+    public static final String COLUMN_COMPANY_EMAIL = "company_email";
+    public static final String COLUMN_COMPANY_STATE = "company_state";   // New
+    public static final String COLUMN_COMPANY_LOGO = "company_logo";     // New Logo URI
+    public static final String COLUMN_COMPANY_GST = "company_gst";
+    public static final String COLUMN_COMPANY_TAGLINE = "company_tagline";
 
     // ...
 
@@ -37,7 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // ...
 
-    public void addLedger(String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage) {
+    public void addLedger(String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage, String bankName, String accNo, String ifsc, String branch) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_NAME, name);
@@ -50,10 +67,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_TYPE, type);
         cv.put(COLUMN_TAX_RATE, taxRate);
         cv.put(COLUMN_IS_PERCENTAGE, isPercentage ? 1 : 0);
+        cv.put(COLUMN_BANK_NAME, bankName);
+        cv.put(COLUMN_BANK_ACCOUNT_NO, accNo);
+        cv.put(COLUMN_BANK_IFSC, ifsc);
+        cv.put(COLUMN_BANK_BRANCH, branch);
         db.insert(TABLE_NAME, null, cv);
     }
     
-    public void updateLedger(int id, String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage) {
+    // Kept for backward compatibility if needed, or update callers
+    public void addLedger(String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage) {
+        addLedger(name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, "", "", "", "");
+    }
+    
+    public void updateLedger(int id, String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage, String bankName, String accNo, String ifsc, String branch) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_NAME, name);
@@ -66,7 +92,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_TYPE, type);
         cv.put(COLUMN_TAX_RATE, taxRate);
         cv.put(COLUMN_IS_PERCENTAGE, isPercentage ? 1 : 0);
+        cv.put(COLUMN_BANK_NAME, bankName);
+        cv.put(COLUMN_BANK_ACCOUNT_NO, accNo);
+        cv.put(COLUMN_BANK_IFSC, ifsc);
+        cv.put(COLUMN_BANK_BRANCH, branch);
         db.update(TABLE_NAME, cv, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
+    }
+    
+    public void updateLedger(int id, String name, String group, String mobile, String email, String address, String gst, double balance, String type, double taxRate, boolean isPercentage) {
+        updateLedger(id, name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, "", "", "", "");
     }
     
     public Cursor getLedger(int id) {
@@ -75,7 +109,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                        COLUMN_GROUP + " as ledger_group, " +
                        COLUMN_MOBILE + ", " + COLUMN_EMAIL + ", " + COLUMN_ADDRESS + ", " + COLUMN_GST + ", " +
                        COLUMN_BALANCE + " as opening_balance, " + 
-                       COLUMN_TYPE + ", " + COLUMN_TAX_RATE + ", " + COLUMN_IS_PERCENTAGE +
+                       COLUMN_TYPE + ", " + COLUMN_TAX_RATE + ", " + COLUMN_IS_PERCENTAGE + ", " +
+                       COLUMN_BANK_NAME + ", " + COLUMN_BANK_ACCOUNT_NO + ", " + COLUMN_BANK_IFSC + ", " + COLUMN_BANK_BRANCH +
                        " FROM " + TABLE_NAME + " WHERE " + COLUMN_ID + "=?";
         return db.rawQuery(query, new String[]{String.valueOf(id)});
     }
@@ -159,6 +194,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_DISPATCH_THROUGH = "dispatch_through";
     public static final String COLUMN_DESTINATION = "destination";
     public static final String COLUMN_TERMS_DELIVERY = "terms_delivery";
+    public static final String COLUMN_BILL_OF_LADING = "bill_of_lading";
+    public static final String COLUMN_MOTOR_VEHICLE_NO = "motor_vehicle_no";
     
     public static final String COLUMN_CONSIGNEE_NAME = "consignee_name";
     public static final String COLUMN_CONSIGNEE_ADDR = "consignee_address";
@@ -177,6 +214,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_INV_QTY = "quantity";
     public static final String COLUMN_INV_RATE = "rate";
     public static final String COLUMN_INV_AMOUNT = "amount"; // Taxable Value
+    public static final String COLUMN_INV_HSN = "hsn";
     public static final String COLUMN_INV_GST_RATE = "gst_rate"; // New
     public static final String COLUMN_INV_CGST = "cgst_amount"; // New
     public static final String COLUMN_INV_SGST = "sgst_amount"; // New
@@ -206,10 +244,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        // Companies Table
+        String queryCompanies = "CREATE TABLE " + TABLE_COMPANIES + " (" +
+                COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_COMPANY_NAME + " TEXT, " +
+                COLUMN_COMPANY_ADDRESS + " TEXT, " +
+                COLUMN_COMPANY_MOBILE + " TEXT, " +
+                COLUMN_COMPANY_PHONE2 + " TEXT, " + // New
+                COLUMN_COMPANY_EMAIL + " TEXT, " +
+                COLUMN_COMPANY_STATE + " TEXT, " +   // New
+                COLUMN_COMPANY_LOGO + " TEXT, " +    // New
+                COLUMN_COMPANY_GST + " TEXT, " +
+                COLUMN_COMPANY_TAGLINE + " TEXT);";
+        db.execSQL(queryCompanies);
+
         String queryGroups = "CREATE TABLE " + TABLE_GROUPS + " (" +
                 COLUMN_GROUP_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 COLUMN_GROUP_NAME + " TEXT, " +
-                COLUMN_GROUP_PARENT + " TEXT);";
+                COLUMN_GROUP_PARENT + " TEXT, " + 
+                COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryGroups);
 
         String queryStockGroups = "CREATE TABLE " + TABLE_STOCK_GROUPS + " (" +
@@ -235,7 +288,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_BALANCE + " REAL, " +
                 COLUMN_TYPE + " TEXT, " + 
                 COLUMN_TAX_RATE + " REAL, " +
-                COLUMN_IS_PERCENTAGE + " INTEGER DEFAULT 0);";
+                COLUMN_IS_PERCENTAGE + " INTEGER DEFAULT 0, " +
+                COLUMN_COMPANY_ID + " INTEGER DEFAULT 0, " +
+                COLUMN_BANK_NAME + " TEXT, " +
+                COLUMN_BANK_ACCOUNT_NO + " TEXT, " +
+                COLUMN_BANK_IFSC + " TEXT, " +
+                COLUMN_BANK_BRANCH + " TEXT);";
         db.execSQL(queryLedgers);
 
         String queryItems = "CREATE TABLE " + TABLE_ITEMS + " (" +
@@ -246,7 +304,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_ITEM_STOCK + " REAL DEFAULT 0, " +
                 COLUMN_ITEM_HSN + " TEXT, " +
                 COLUMN_ITEM_GROUP + " TEXT, " +
-                COLUMN_ITEM_CATEGORY + " TEXT);"; 
+                COLUMN_ITEM_CATEGORY + " TEXT, " +
+                COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);"; 
         db.execSQL(queryItems);
 
         String queryInvoices = "CREATE TABLE " + TABLE_INVOICES + " (" +
@@ -268,13 +327,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_DISPATCH_THROUGH + " TEXT, " +
                 COLUMN_DESTINATION + " TEXT, " +
                 COLUMN_TERMS_DELIVERY + " TEXT, " +
+                COLUMN_BILL_OF_LADING + " TEXT, " +
+                COLUMN_MOTOR_VEHICLE_NO + " TEXT, " +
                 COLUMN_CONSIGNEE_NAME + " TEXT, " +
                 COLUMN_CONSIGNEE_ADDR + " TEXT, " +
                 COLUMN_CONSIGNEE_GST + " TEXT, " +
                 COLUMN_CONSIGNEE_STATE + " TEXT, " +
                 COLUMN_BUYER_ADDR + " TEXT, " +
                 COLUMN_BUYER_GST + " TEXT, " +
-                COLUMN_BUYER_STATE + " TEXT);";
+                COLUMN_BUYER_STATE + " TEXT, " +
+                COLUMN_COMPANY_ID + " INTEGER DEFAULT 0, " +
+                "bank_ledger_id INTEGER DEFAULT -1);"; // New Column for Bank Selection
         db.execSQL(queryInvoices);
 
         String queryInvoiceItems = "CREATE TABLE " + TABLE_INVOICE_ITEMS + " (" +
@@ -284,6 +347,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_INV_QTY + " REAL, " +
                 COLUMN_INV_RATE + " REAL, " +
                 COLUMN_INV_AMOUNT + " REAL, " +
+                COLUMN_INV_HSN + " TEXT, " +
                 COLUMN_INV_GST_RATE + " REAL, " +
                 COLUMN_INV_CGST + " REAL, " +
                 COLUMN_INV_SGST + " REAL, " +
@@ -295,7 +359,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_PURCHASE_INV_NO + " TEXT, " +
                 COLUMN_PURCHASE_DATE + " TEXT, " +
                 COLUMN_SUPPLIER_NAME + " TEXT, " +
-                COLUMN_PURCHASE_TOTAL + " REAL);";
+                COLUMN_PURCHASE_TOTAL + " REAL, " +
+                COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryPurchases);
 
         String queryPurchaseItems = "CREATE TABLE " + TABLE_PURCHASE_ITEMS + " (" +
@@ -381,6 +446,78 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             } catch (Exception e) {
                 // Ignore if already exists (safe migration)
             }
+        }
+        if (oldVersion < 12 && newVersion >= 12) {
+            // Upgrade for version 12: Add Bill of Lading, Motor Vehicle, HSN
+            try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN " + COLUMN_BILL_OF_LADING + " TEXT"); } catch (Exception e) {}
+            try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN " + COLUMN_MOTOR_VEHICLE_NO + " TEXT"); } catch (Exception e) {}
+            try { db.execSQL("ALTER TABLE " + TABLE_INVOICE_ITEMS + " ADD COLUMN " + COLUMN_INV_HSN + " TEXT"); } catch (Exception e) {}
+        }
+        if (oldVersion < 13 && newVersion >= 13) {
+            // Upgrade for version 13: Company Support
+            try {
+                // Create Companies Table
+                 String queryCompanies = "CREATE TABLE " + TABLE_COMPANIES + " (" +
+                    COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    COLUMN_COMPANY_NAME + " TEXT, " +
+                    COLUMN_COMPANY_ADDRESS + " TEXT, " +
+                    COLUMN_COMPANY_MOBILE + " TEXT, " +
+                    COLUMN_COMPANY_EMAIL + " TEXT, " +
+                    COLUMN_COMPANY_GST + " TEXT, " +
+                    COLUMN_COMPANY_TAGLINE + " TEXT);";
+                db.execSQL(queryCompanies);
+                
+                // Add company_id to existing tables
+                db.execSQL("ALTER TABLE " + TABLE_GROUPS + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0");
+                // Voucher Charges - linking to voucher which has company, or ledger which has company. 
+                // Just in case, no specific company_id needed if linked to voucher_id which is inside an Invoice(company_id).
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (oldVersion < 14 && newVersion >= 14) {
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_PHONE2 + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_STATE + " TEXT");
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+        }
+        if (oldVersion < 15 && newVersion >= 15) {
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_LOGO + " TEXT");
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+        }
+        // Fix for "column does not exist" if v15 upgrade failed silentely
+        if (oldVersion < 16 && newVersion >= 16) {
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_LOGO + " TEXT");
+             } catch (Exception e) {
+                 // Ignore if already exists
+             }
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_PHONE2 + " TEXT");
+             } catch (Exception e) {}
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_STATE + " TEXT");
+             } catch (Exception e) {}
+        }
+        if (oldVersion < 17 && newVersion >= 17) {
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_BANK_NAME + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_BANK_ACCOUNT_NO + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_BANK_IFSC + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_BANK_BRANCH + " TEXT");
+                
+                db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN bank_ledger_id INTEGER DEFAULT -1");
+             } catch (Exception e) {}
         }
     }
 
@@ -662,7 +799,53 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_DELIVERY_NOTE_DATE, invoice.getDeliveryNoteDate());
         cv.put(COLUMN_DISPATCH_THROUGH, invoice.getDispatchThrough());
         cv.put(COLUMN_DESTINATION, invoice.getDestination());
+        cv.put(COLUMN_DESTINATION, invoice.getDestination());
         cv.put(COLUMN_TERMS_DELIVERY, invoice.getTermsOfDelivery());
+        cv.put(COLUMN_BILL_OF_LADING, invoice.getBillOfLading());
+        cv.put(COLUMN_MOTOR_VEHICLE_NO, invoice.getMotorVehicleNo());
+        
+        cv.put(COLUMN_CONSIGNEE_NAME, invoice.getConsigneeName());
+        cv.put(COLUMN_CONSIGNEE_ADDR, invoice.getConsigneeAddress());
+        cv.put(COLUMN_CONSIGNEE_GST, invoice.getConsigneeGst());
+        cv.put(COLUMN_CONSIGNEE_STATE, invoice.getConsigneeState());
+        
+        cv.put(COLUMN_BUYER_GST, invoice.getBuyerGst());
+        cv.put(COLUMN_BUYER_STATE, invoice.getBuyerState());
+        
+        cv.put("bank_ledger_id", invoice.getBankLedgerId());
+        
+        // Inherit Company ID from invoice object or pass as argument? 
+        // Better to pass as argument to keep POJO clean or add field to POJO.
+        // For now, overloading/modifying:
+        return db.insert(TABLE_INVOICES, null, cv);
+    }
+
+    public long addInvoiceObject(Invoice invoice, int companyId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_INVOICE_NO, invoice.getInvoiceNumber());
+        cv.put(COLUMN_INVOICE_DATE, invoice.getDate());
+        cv.put(COLUMN_CUSTOMER_NAME, invoice.getCustomerName());
+        cv.put(COLUMN_TOTAL_AMOUNT, invoice.getTotalAmount());
+        cv.put(COLUMN_DELIVERY_CHARGES, invoice.getDeliveryCharges());
+        cv.put(COLUMN_TOTAL_TAX, invoice.getTotalTaxAmount());
+        cv.put(COLUMN_GRAND_TOTAL, invoice.getGrandTotal());
+        
+        // Detailed Fields
+        cv.put(COLUMN_DELIVERY_NOTE, invoice.getDeliveryNote());
+        cv.put(COLUMN_MODE_PAYMENT, invoice.getModeOfPayment());
+        cv.put(COLUMN_REF_NO, invoice.getReferenceNo());
+        cv.put(COLUMN_OTHER_REF, invoice.getOtherReferences());
+        cv.put(COLUMN_BUYER_ORDER_NO, invoice.getBuyersOrderNo());
+        cv.put(COLUMN_DISPATCH_DOC_NO, invoice.getDispatchDocNo());
+        cv.put(COLUMN_DELIVERY_NOTE, invoice.getDeliveryNote());
+        cv.put(COLUMN_DISPATCH_DOC_NO, invoice.getDispatchDocNo());
+        cv.put(COLUMN_DELIVERY_NOTE_DATE, invoice.getDeliveryNoteDate());
+        cv.put(COLUMN_DISPATCH_THROUGH, invoice.getDispatchThrough());
+        cv.put(COLUMN_DESTINATION, invoice.getDestination());
+        cv.put(COLUMN_TERMS_DELIVERY, invoice.getTermsOfDelivery());
+        cv.put(COLUMN_BILL_OF_LADING, invoice.getBillOfLading());
+        cv.put(COLUMN_MOTOR_VEHICLE_NO, invoice.getMotorVehicleNo());
         
         cv.put(COLUMN_CONSIGNEE_NAME, invoice.getConsigneeName());
         cv.put(COLUMN_CONSIGNEE_ADDR, invoice.getConsigneeAddress());
@@ -673,11 +856,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_BUYER_GST, invoice.getBuyerGst());
         cv.put(COLUMN_BUYER_STATE, invoice.getBuyerState());
         
+        cv.put(COLUMN_COMPANY_ID, companyId);
+        
         return db.insert(TABLE_INVOICES, null, cv);
     }
 
-    // Updated to include Unit
-    public long addInvoiceItem(long invoiceId, String itemName, double quantity, double rate, double amount, double gstRate, double cgst, double sgst, String unit) {
+    // Updated to include Unit and HSN
+    public long addInvoiceItem(long invoiceId, String itemName, double quantity, double rate, double amount, double gstRate, double cgst, double sgst, String unit, String hsn) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_INV_ID_FK, invoiceId);
@@ -686,6 +871,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_INV_RATE, rate);
         values.put(COLUMN_INV_AMOUNT, amount);
         values.put(COLUMN_INV_GST_RATE, gstRate);
+        values.put(COLUMN_INV_HSN, hsn);
         values.put(COLUMN_INV_CGST, cgst);
         values.put(COLUMN_INV_SGST, sgst);
         values.put(COLUMN_UNIT, unit);
@@ -694,6 +880,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // Decrease Stock for Sales
         updateStock(itemName, -quantity);
         return result;
+    }
+    
+    // Overload for backward compatibility
+    public long addInvoiceItem(long invoiceId, String itemName, double quantity, double rate, double amount, double gstRate, double cgst, double sgst, String unit) {
+        return addInvoiceItem(invoiceId, itemName, quantity, rate, amount, gstRate, cgst, sgst, unit, "");
     }
     
     // Overload for backward compatibility (defaults unit to empty)
@@ -707,14 +898,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     
     // --- Purchase Methods ---
-    public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount) {
+    public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount, int companyId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_PURCHASE_INV_NO, invoiceNo);
         cv.put(COLUMN_PURCHASE_DATE, date);
         cv.put(COLUMN_SUPPLIER_NAME, supplierName);
         cv.put(COLUMN_PURCHASE_TOTAL, totalAmount);
+        cv.put(COLUMN_COMPANY_ID, companyId);
         return db.insert(TABLE_PURCHASES, null, cv);
+    }
+    
+    // Legacy overload
+    public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount) {
+         return addPurchase(invoiceNo, date, supplierName, totalAmount, 0);
     }
 
     public void addPurchaseItem(long purchaseId, String itemName, double qty, double rate, double amount) {
@@ -745,13 +942,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // --- Voucher Retrieval Methods ---
-    public List<VoucherSummary> getAllVouchers() {
+    public List<VoucherSummary> getAllVouchers(int companyId) {
         List<VoucherSummary> list = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
         
         // Fetch Sales
-        String querySales = "SELECT " + COLUMN_INVOICE_ID + ", " + COLUMN_INVOICE_NO + ", " + COLUMN_INVOICE_DATE + ", " + COLUMN_CUSTOMER_NAME + ", " + COLUMN_TOTAL_AMOUNT + " FROM " + TABLE_INVOICES;
-        Cursor c1 = db.rawQuery(querySales, null);
+        String querySales = "SELECT " + COLUMN_INVOICE_ID + ", " + COLUMN_INVOICE_NO + ", " + COLUMN_INVOICE_DATE + ", " + COLUMN_CUSTOMER_NAME + ", " + COLUMN_TOTAL_AMOUNT + 
+                            " FROM " + TABLE_INVOICES + " WHERE " + COLUMN_COMPANY_ID + "=?";
+        Cursor c1 = db.rawQuery(querySales, new String[]{String.valueOf(companyId)});
         if (c1 != null) {
             while (c1.moveToNext()) {
                 list.add(new VoucherSummary(
@@ -767,8 +965,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         
         // Fetch Purchases
-        String queryPurchases = "SELECT " + COLUMN_PURCHASE_ID + ", " + COLUMN_PURCHASE_INV_NO + ", " + COLUMN_PURCHASE_DATE + ", " + COLUMN_SUPPLIER_NAME + ", " + COLUMN_PURCHASE_TOTAL + " FROM " + TABLE_PURCHASES;
-        Cursor c2 = db.rawQuery(queryPurchases, null);
+        String queryPurchases = "SELECT " + COLUMN_PURCHASE_ID + ", " + COLUMN_PURCHASE_INV_NO + ", " + COLUMN_PURCHASE_DATE + ", " + COLUMN_SUPPLIER_NAME + ", " + COLUMN_PURCHASE_TOTAL + 
+                                " FROM " + TABLE_PURCHASES + " WHERE " + COLUMN_COMPANY_ID + "=?";
+        Cursor c2 = db.rawQuery(queryPurchases, new String[]{String.valueOf(companyId)});
          if (c2 != null) {
             while (c2.moveToNext()) {
                 list.add(new VoucherSummary(
@@ -1003,5 +1202,67 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             count = android.database.DatabaseUtils.queryNumEntries(db, TABLE_PURCHASES);
         }
         return count + 1;
+    }
+    // --- Company Methods ---
+    public long addCompany(String name, String address, String mobile, String phone2, String email, String state, String logoUri, String gst, String tagline) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_COMPANY_NAME, name);
+        cv.put(COLUMN_COMPANY_ADDRESS, address);
+        cv.put(COLUMN_COMPANY_MOBILE, mobile);
+        cv.put(COLUMN_COMPANY_PHONE2, phone2);
+        cv.put(COLUMN_COMPANY_EMAIL, email);
+        cv.put(COLUMN_COMPANY_STATE, state);
+        cv.put(COLUMN_COMPANY_LOGO, logoUri);
+        cv.put(COLUMN_COMPANY_GST, gst);
+        cv.put(COLUMN_COMPANY_TAGLINE, tagline);
+        return db.insert(TABLE_COMPANIES, null, cv);
+    }
+    
+    public Cursor getCompany(int id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        return db.query(TABLE_COMPANIES, null, COLUMN_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+    }
+    
+    public List<Company> getAllCompanies() {
+        List<Company> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_COMPANIES, null, null, null, null, null, COLUMN_ID + " ASC");
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_COMPANY_NAME));
+                String address = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_COMPANY_ADDRESS));
+                String gst = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_COMPANY_GST));
+                list.add(new Company(id, name, address, gst));
+            }
+            cursor.close();
+        }
+        return list;
+    }
+    
+    // --- Report Methods ---
+    public Cursor getItemStockSummary() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        // Return Item Name and Stock
+        return db.query(TABLE_ITEMS, 
+            new String[]{COLUMN_ITEM_NAME, COLUMN_ITEM_STOCK}, 
+            null, null, null, null, COLUMN_ITEM_STOCK + " DESC"); // Order by stock desc
+    }
+    
+    public static class Company {
+        public int id;
+        public String name;
+        public String address;
+        public String gst;
+        
+        public Company(int id, String name, String address, String gst) {
+            this.id = id; this.name = name; this.address = address; this.gst = gst;
+        }
+        
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }

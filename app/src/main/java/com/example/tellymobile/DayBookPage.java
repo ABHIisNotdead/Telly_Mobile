@@ -40,7 +40,10 @@ public class DayBookPage extends BaseActivity {
     }
     
     private void loadVouchers() {
-        List<DatabaseHelper.VoucherSummary> vouchers = databaseHelper.getAllVouchers();
+        android.content.SharedPreferences prefs = getSharedPreferences("TellyPrefs", MODE_PRIVATE);
+        int companyId = prefs.getInt("selected_company_id", 0);
+        
+        List<DatabaseHelper.VoucherSummary> vouchers = databaseHelper.getAllVouchers(companyId);
         adapter = new DayBookAdapter(vouchers, new DayBookAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(DatabaseHelper.VoucherSummary voucher) {

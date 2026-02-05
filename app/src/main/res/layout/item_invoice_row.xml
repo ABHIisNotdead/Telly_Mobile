@@ -52,6 +52,15 @@
             android:text="Amount"
             android:textStyle="bold"
             android:textColor="@color/primary"/>
+            
+        <ImageButton
+            android:id="@+id/btnDelete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/error"
+            android:padding="8dp"/>
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

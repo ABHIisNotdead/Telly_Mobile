@@ -32,11 +32,24 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    aaptOptions {
-        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:!~$*"
+    androidResources {
+        ignoreAssetsPatterns.addAll(
+            listOf(
+                "!.svn",
+                "!.git",
+                "!.ds_store",
+                "!*.scc",
+                ".*",
+                "!CVS",
+                "!thumbs.db",
+                "!picasa.ini",
+                "!*~",
+                "!~$*"
+            )
+        )
     }
-
 }
+
 dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
@@ -50,3 +63,6 @@ dependencies {
     implementation("org.apache.poi:poi:5.2.3")
     implementation("org.apache.poi:poi-ooxml:5.2.3")
 }
+
+
+

@@ -18,6 +18,7 @@ import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.PrintSetup;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -50,21 +51,8 @@ public class ExcelGenerator {
     public void generateAndOpenExcel(Invoice invoice) {
         new Thread(() -> {
             try {
-                // Check if template exists
-                boolean hasTemplate = false;
-                try {
-                     InputStream is = context.getAssets().open(TEMPLATE_FILENAME);
-                     is.close();
-                     hasTemplate = true;
-                } catch (IOException e) {
-                    hasTemplate = false;
-                }
-
-                if (hasTemplate) {
-                    processTemplate(invoice);
-                } else {
-                    processManual(invoice);
-                }
+                Workbook workbook = createWorkbook(invoice);
+                saveAndOpen(workbook, invoice.getInvoiceNumber());
             } catch (Exception e) {
                 e.printStackTrace();
                 showToast("Error generating Excel: " + e.getMessage());
@@ -72,10 +60,34 @@ public class ExcelGenerator {
         }).start();
     }
 
-    private void processTemplate(Invoice invoice) throws IOException {
+    public Workbook createWorkbook(Invoice invoice) throws IOException {
+        // Check if template exists
+        boolean hasTemplate = false;
+        try {
+             InputStream is = context.getAssets().open(TEMPLATE_FILENAME);
+             is.close();
+             hasTemplate = true;
+        } catch (IOException e) {
+            hasTemplate = false;
+        }
+
+        if (hasTemplate) {
+            return processTemplate(invoice);
+        } else {
+            return processManual(invoice);
+        }
+    }
+
+    private Workbook processTemplate(Invoice invoice) throws IOException {
         InputStream is = context.getAssets().open(TEMPLATE_FILENAME);
         Workbook workbook = WorkbookFactory.create(is);
         Sheet sheet = workbook.getSheetAt(0);
+        
+        // A4 Paper Size
+        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        sheet.setFitToPage(true);
+        sheet.getPrintSetup().setFitWidth((short) 1);
+        sheet.getPrintSetup().setFitHeight((short) 0);
 
         // 1. Prepare Data Map
         Map<String, String> data = new HashMap<>();
@@ -98,6 +110,8 @@ public class ExcelGenerator {
         data.put("{{DISPATCH_THROUGH}}", checkNull(invoice.getDispatchThrough()));
         data.put("{{DESTINATION}}", checkNull(invoice.getDestination()));
         data.put("{{TERMS_DELIVERY}}", checkNull(invoice.getTermsOfDelivery()));
+        data.put("{{BILL_OF_LADING}}", checkNull(invoice.getBillOfLading()));
+        data.put("{{MOTOR_VEHICLE_NO}}", checkNull(invoice.getMotorVehicleNo()));
 
         // Buyer Details
         data.put("{{BUYER_ADDRESS}}", checkNull(invoice.getBuyerAddress()));
@@ -162,7 +176,7 @@ public class ExcelGenerator {
                       
                       // Fill Data using Map
                       fillCell(currentRow, colMap.get("{{ITEM_NAME}}"), item.getItemName());
-                      fillCell(currentRow, colMap.get("{{HSN}}"), "");
+                      fillCell(currentRow, colMap.get("{{HSN}}"), item.getHsn());
                       fillCell(currentRow, colMap.get("{{GST}}"), item.getGstRate() + "%");
                       fillCell(currentRow, colMap.get("{{QTY}}"), String.valueOf(item.getQuantity()));
                       fillCell(currentRow, colMap.get("{{RATE}}"), String.format("%.2f", item.getRate()));
@@ -188,7 +202,7 @@ public class ExcelGenerator {
         // Recalculate Formulas
         workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
 
-        saveAndOpen(workbook, invoice.getInvoiceNumber());
+        return workbook;
     }
     
     private void fillCell(Row row, Integer colIndex, String value) {
@@ -220,10 +234,15 @@ public class ExcelGenerator {
         valueCell.setCellStyle(style);
     }
 
-
-    private void processManual(Invoice invoice) throws IOException {
+    private Workbook processManual(Invoice invoice) throws IOException {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Invoice");
+        
+        // A4 Paper Size
+        sheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+        sheet.setFitToPage(true);
+        sheet.getPrintSetup().setFitWidth((short) 1);
+        sheet.getPrintSetup().setFitHeight((short) 0);
 
         // Styles
         CellStyle headerStyle = workbook.createCellStyle();
@@ -262,23 +281,33 @@ public class ExcelGenerator {
 
         // Company Info
         Row companyRow = sheet.createRow(rowNum++);
-        companyRow.createCell(0).setCellValue("SHREE AMBEY PACKAGING");
+        createCell(companyRow, 0, "SHREE AMBEY PACKAGING", titleStyle); 
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 5));
         
         Row addrRow = sheet.createRow(rowNum++);
-        addrRow.createCell(0).setCellValue("Vasai East, Mumbai");
+        createCell(addrRow, 0, "Vasai East, Mumbai", dataStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum-1, rowNum-1, 0, 5));
         
         rowNum++; 
 
         // Customer Info
         Row infoRow1 = sheet.createRow(rowNum++);
-        infoRow1.createCell(0).setCellValue("Customer Name:");
-        infoRow1.createCell(1).setCellValue(invoice.getCustomerName());
-        infoRow1.createCell(3).setCellValue("Invoice No:");
-        infoRow1.createCell(4).setCellValue(invoice.getInvoiceNumber());
+        createCell(infoRow1, 0, "Customer Name:", headerStyle);
+        createCell(infoRow1, 1, invoice.getCustomerName(), dataStyle);
+        createCell(infoRow1, 3, "Invoice No:", headerStyle);
+        createCell(infoRow1, 4, invoice.getInvoiceNumber(), dataStyle);
 
         Row infoRow2 = sheet.createRow(rowNum++);
-        infoRow2.createCell(3).setCellValue("Date:");
-        infoRow2.createCell(4).setCellValue(invoice.getDate());
+        createCell(infoRow2, 0, "", dataStyle); 
+        createCell(infoRow2, 1, "", dataStyle); 
+        createCell(infoRow2, 3, "Date:", headerStyle);
+        createCell(infoRow2, 4, invoice.getDate(), dataStyle);
+        
+        Row infoRow3 = sheet.createRow(rowNum++);
+        createCell(infoRow3, 0, "Vehicle No:", headerStyle);
+        createCell(infoRow3, 1, invoice.getMotorVehicleNo(), dataStyle);
+        createCell(infoRow3, 3, "Bill of Lading:", headerStyle);
+        createCell(infoRow3, 4, invoice.getBillOfLading(), dataStyle);
         
         rowNum++;
 
@@ -297,7 +326,7 @@ public class ExcelGenerator {
                 Row row = sheet.createRow(rowNum++);
                 
                 createCell(row, 0, item.getItemName(), dataStyle);
-                createCell(row, 1, "", dataStyle);
+                createCell(row, 1, item.getHsn(), dataStyle);
                 createCell(row, 2, item.getGstRate() + "%", dataStyle);
                 createCell(row, 3, String.valueOf(item.getQuantity()), dataStyle);
                 createCell(row, 4, String.format("%.2f", item.getRate()), dataStyle);
@@ -316,9 +345,9 @@ public class ExcelGenerator {
             sheet.autoSizeColumn(i);
         }
 
-        saveAndOpen(workbook, invoice.getInvoiceNumber());
+        return workbook;
     }
-
+    
     private void saveAndOpen(Workbook workbook, String invoiceNo) throws IOException {
         File directory = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Invoices");
         if (!directory.exists()) directory.mkdirs();

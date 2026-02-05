@@ -19,6 +19,7 @@ public class Ledger extends BaseActivity {
 
     // Define variables
     TextInputEditText etName, etMobile, etEmail, etAddress, etGst, etBalance, etTaxRate;
+    TextInputEditText etBankName, etBankAccountNo, etBankIfsc, etBankBranch;
     Spinner spnGroup;
     RadioGroup rgDrCr;
     RadioButton rbDr, rbCr;
@@ -47,7 +48,17 @@ public class Ledger extends BaseActivity {
         
         etTaxRate = findViewById(R.id.etTaxRate);
         cbIsPercentage = findViewById(R.id.cbIsPercentage);
+        etTaxRate = findViewById(R.id.etTaxRate);
+        cbIsPercentage = findViewById(R.id.cbIsPercentage);
         cardTaxDetails = findViewById(R.id.cardTaxDetails);
+        
+        // Bank Details
+        etBankName = findViewById(R.id.etBankName);
+        etBankAccountNo = findViewById(R.id.etBankAccountNo);
+        etBankIfsc = findViewById(R.id.etBankIfsc);
+        etBankBranch = findViewById(R.id.etBankBranch);
+        View cardBankDetails = findViewById(R.id.cardBankDetails);
+        
         View cardMailingDetails = findViewById(R.id.cardMailingDetails); // Local or Field? Best to be field if needed elsewhere, but local is fine for init/listener capture
 
         com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.topAppBar);
@@ -85,13 +96,19 @@ public class Ledger extends BaseActivity {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 String selectedGroup = groups.get(position);
-                // Toast.makeText(Ledger.this, "Selected: " + selectedGroup, Toast.LENGTH_SHORT).show(); // Debug
-                if (selectedGroup != null && (selectedGroup.contains("Duties & Taxes") || selectedGroup.contains("Tax"))) {
-                    cardTaxDetails.setVisibility(View.VISIBLE);
-                    cardMailingDetails.setVisibility(View.GONE);
-                } else {
-                    cardTaxDetails.setVisibility(View.GONE);
-                    cardMailingDetails.setVisibility(View.VISIBLE);
+                // Reset Visibility
+                cardTaxDetails.setVisibility(View.GONE);
+                cardMailingDetails.setVisibility(View.GONE);
+                cardBankDetails.setVisibility(View.GONE);
+
+                if (selectedGroup != null) {
+                    if (selectedGroup.contains("Duties & Taxes") || selectedGroup.contains("Tax")) {
+                        cardTaxDetails.setVisibility(View.VISIBLE);
+                    } else if (selectedGroup.contains("Bank Accounts") || selectedGroup.contains("Bank")) {
+                        cardBankDetails.setVisibility(View.VISIBLE);
+                    } else {
+                        cardMailingDetails.setVisibility(View.VISIBLE);
+                    }
                 }
             }
             @Override
@@ -121,6 +138,12 @@ public class Ledger extends BaseActivity {
                 String taxRateStr = etTaxRate.getText().toString().trim();
                 double taxRate = taxRateStr.isEmpty() ? 0 : Double.parseDouble(taxRateStr);
                 boolean isPercentage = cbIsPercentage.isChecked();
+                
+                // Bank Details
+                String bankName = etBankName.getText().toString().trim();
+                String accNo = etBankAccountNo.getText().toString().trim();
+                String ifsc = etBankIfsc.getText().toString().trim();
+                String branch = etBankBranch.getText().toString().trim();
 
                 // Determine Dr or Cr
                 int selectedId = rgDrCr.getCheckedRadioButtonId();
@@ -140,10 +163,10 @@ public class Ledger extends BaseActivity {
 
                 // Save to Database
                 if ("EDIT".equals(mode) && updateId != -1) {
-                    myDB.updateLedger(updateId, name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage);
+                    myDB.updateLedger(updateId, name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, bankName, accNo, ifsc, branch);
                     Toast.makeText(Ledger.this, "Ledger Updated Successfully!", Toast.LENGTH_SHORT).show();
                 } else {
-                    myDB.addLedger(name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage);
+                    myDB.addLedger(name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, bankName, accNo, ifsc, branch);
                     // Toast handled in addLedger but good to have consistency
                 }
                 finish();
@@ -167,6 +190,19 @@ public class Ledger extends BaseActivity {
             
             int pctIdx = cursor.getColumnIndex("is_percentage");
             if (pctIdx != -1) cbIsPercentage.setChecked(cursor.getInt(pctIdx) == 1);
+            
+            // Bank Details
+            int bankNameIdx = cursor.getColumnIndex("bank_name");
+            if(bankNameIdx != -1) etBankName.setText(cursor.getString(bankNameIdx));
+            
+            int accIdx = cursor.getColumnIndex("bank_account_no");
+            if(accIdx != -1) etBankAccountNo.setText(cursor.getString(accIdx));
+            
+            int ifscIdx = cursor.getColumnIndex("bank_ifsc");
+            if(ifscIdx != -1) etBankIfsc.setText(cursor.getString(ifscIdx));
+            
+            int branchIdx = cursor.getColumnIndex("bank_branch");
+            if(branchIdx != -1) etBankBranch.setText(cursor.getString(branchIdx));
             
             // Set Spinner Selection (Simplified loop)
             String group = cursor.getString(cursor.getColumnIndexOrThrow("ledger_group"));

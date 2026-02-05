@@ -11,8 +11,47 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.appbar.MaterialToolbar;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.content.SharedPreferences;
+import java.util.List;
+import java.util.ArrayList;
+import android.app.AlertDialog;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 
 public class MainPage extends BaseActivity {
+
+    private ArrayAdapter<DatabaseHelper.Company> companyAdapter;
+    private static final String PREFS_NAME = "TellyPrefs";
+    private static final String KEY_COMPANY_ID = "selected_company_id";
+    
+    // Missing Fields Restored
+    private DatabaseHelper dbHelper;
+    private List<DatabaseHelper.Company> companyList;
+    
+    // Image Picker
+    private android.net.Uri selectedLogoUri = null;
+    private android.widget.ImageView ivLogoPreview = null;
+    
+    private final androidx.activity.result.ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
+        new androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+        uri -> {
+            if (uri != null) {
+                selectedLogoUri = uri;
+                if (ivLogoPreview != null) {
+                    ivLogoPreview.setImageURI(uri);
+                    // Persist Permission
+                    try {
+                        getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,6 +61,11 @@ public class MainPage extends BaseActivity {
         
         MaterialToolbar toolbar = findViewById(R.id.topAppBar);
         setSupportActionBar(toolbar);
+        
+        dbHelper = new DatabaseHelper(this); // Initialize dbHelper
+        companyList = new ArrayList<>();     // Initialize List
+        refreshCompanyList();
+        updateToolbarTitle();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -91,7 +135,10 @@ public class MainPage extends BaseActivity {
 
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
-        if (item.getItemId() == R.id.action_theme) {
+        if (item.getItemId() == R.id.action_change_company) {
+            showCompanySelectionDialog();
+            return true;
+        } else if (item.getItemId() == R.id.action_theme) {
             showThemeSelectionDialog();
             return true;
         } else if (item.getItemId() == R.id.action_messages) {
@@ -124,6 +171,108 @@ public class MainPage extends BaseActivity {
             // Restart Activity to apply theme
             recreate();
         });
+        builder.show();
+    }
+    
+    private void showCompanySelectionDialog() {
+        refreshCompanyList();
+        
+        // Prepare list for display (Names only)
+        final String[] companyNames = new String[companyList.size()];
+        for (int i = 0; i < companyList.size(); i++) {
+            companyNames[i] = companyList.get(i).name;
+        }
+
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Select Company");
+        builder.setItems(companyNames, (dialog, which) -> {
+            DatabaseHelper.Company selected = companyList.get(which);
+            if (selected.id == -1) {
+                showAddCompanyDialog();
+            } else {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putInt(KEY_COMPANY_ID, selected.id)
+                    .apply();
+                updateToolbarTitle();
+                // Optionally show toast or refresh data if needed
+            }
+        });
+        builder.show();
+    }
+    
+    private void updateToolbarTitle() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int savedId = prefs.getInt(KEY_COMPANY_ID, -1);
+        String companyName = "Select Company";
+        
+        if (savedId != -1) {
+            for (DatabaseHelper.Company c : companyList) {
+                if (c.id == savedId) {
+                    companyName = c.name;
+                    break;
+                }
+            }
+        }
+        
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setSubtitle(companyName);
+        }
+    }
+    
+    private void refreshCompanyList() {
+        companyList.clear();
+        companyList.addAll(dbHelper.getAllCompanies());
+        // Add "Add New..." option
+        companyList.add(new DatabaseHelper.Company(-1, "+ Add New Company", "", ""));
+        if (companyAdapter != null) companyAdapter.notifyDataSetChanged();
+    }
+    
+    private void showAddCompanyDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Create New Company");
+        
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_company, null);
+        builder.setView(view);
+        
+        final EditText etName = view.findViewById(R.id.etCompanyName);
+        final EditText etAddress = view.findViewById(R.id.etCompanyAddress);
+        final EditText etPhone1 = view.findViewById(R.id.etCompanyPhone1);
+        final EditText etPhone2 = view.findViewById(R.id.etCompanyPhone2);
+        final EditText etEmail = view.findViewById(R.id.etCompanyEmail);
+        final EditText etState = view.findViewById(R.id.etCompanyState);
+        final EditText etGST = view.findViewById(R.id.etCompanyGod); // Actually GST field ID
+        
+        ivLogoPreview = view.findViewById(R.id.ivCompanyLogo);
+        Button btnSelectLogo = view.findViewById(R.id.btnSelectLogo);
+        selectedLogoUri = null; // Reset
+        
+        btnSelectLogo.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+        
+        builder.setPositiveButton("Create", (dialog, which) -> {
+            String name = etName.getText().toString();
+            if (!name.isEmpty()) {
+                long id = dbHelper.addCompany(
+                    name, 
+                    etAddress.getText().toString(),
+                    etPhone1.getText().toString(),
+                    etPhone2.getText().toString(),
+                    etEmail.getText().toString(),
+                    etState.getText().toString(),
+                    selectedLogoUri != null ? selectedLogoUri.toString() : "",
+                    etGST.getText().toString(),
+                    "" // Tagline
+                );
+                
+                if (id != -1) {
+                    refreshCompanyList();
+                    // Auto Select
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putInt(KEY_COMPANY_ID, (int)id).apply();
+                    updateToolbarTitle(); 
+                }
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
         builder.show();
     }
 }

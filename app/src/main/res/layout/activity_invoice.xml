@@ -94,6 +94,21 @@
                         android:layout_height="50dp"
                         android:layout_marginTop="4dp"
                         android:background="@drawable/border"/>
+
+                    <TextView
+                        android:text="Select Bank (Optional)"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurface"/>
+
+                    <Spinner
+                        android:id="@+id/spnBankLedger"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/border"/>
                         
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -170,6 +185,18 @@
                          <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Destination" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
                             <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDestination" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- Row 6 -->
+                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Bill of Lading/LR-RR No." style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginEnd="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBillOfLading" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                         <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Motor Vehicle No." style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etMotorVehicleNo" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
                     
@@ -265,10 +292,24 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Item Name"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/actvItemName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="HSN/SAC"
+                        android:layout_marginTop="8dp"
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etItemName"
+                            android:id="@+id/etHsn"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="text" />

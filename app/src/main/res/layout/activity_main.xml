@@ -20,7 +20,11 @@
             app:title="Telly Mobile"
             app:titleTextColor="@color/on_primary"
             app:menu="@null"
-            style="@style/Widget.Material3.Toolbar.Surface" />
+            style="@style/Widget.Material3.Toolbar.Surface">
+
+
+
+        </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -108,7 +112,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Voucher Entry"
-                        style="@style/Widget.Material3.Button.UnelevatedButton"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_marginBottom="8dp"/>
 
                     <LinearLayout

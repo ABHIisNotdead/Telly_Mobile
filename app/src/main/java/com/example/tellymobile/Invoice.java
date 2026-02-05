@@ -23,6 +23,9 @@ public class Invoice {
     private String destination;
     private String termsOfDelivery;
     
+    private String billOfLading; // Bill of Lading/LR-RR No.
+    private String motorVehicleNo;
+    
     private String consigneeName;
     private String consigneeAddress;
     private String consigneeGst;
@@ -44,10 +47,11 @@ public class Invoice {
     }
 
     // Setters for new fields (Builder style or standard)
-    public void setDispatchDetails(String deliveryNote, String modeOfPayment, String referenceNo, String otherReferences, String buyersOrderNo, String dispatchDocNo, String deliveryNoteDate, String dispatchThrough, String destination, String termsOfDelivery) {
+    public void setDispatchDetails(String deliveryNote, String modeOfPayment, String referenceNo, String otherReferences, String buyersOrderNo, String dispatchDocNo, String deliveryNoteDate, String dispatchThrough, String destination, String termsOfDelivery, String billOfLading, String motorVehicleNo) {
         this.deliveryNote = deliveryNote; this.modeOfPayment = modeOfPayment; this.referenceNo = referenceNo; this.otherReferences = otherReferences;
         this.buyersOrderNo = buyersOrderNo; this.dispatchDocNo = dispatchDocNo; this.deliveryNoteDate = deliveryNoteDate;
         this.dispatchThrough = dispatchThrough; this.destination = destination; this.termsOfDelivery = termsOfDelivery;
+        this.billOfLading = billOfLading; this.motorVehicleNo = motorVehicleNo;
     }
 
     public void setConsigneeDetails(String name, String address, String gst, String state) {
@@ -78,6 +82,8 @@ public class Invoice {
     public String getDispatchThrough() { return dispatchThrough; }
     public String getDestination() { return destination; }
     public String getTermsOfDelivery() { return termsOfDelivery; }
+    public String getBillOfLading() { return billOfLading; }
+    public String getMotorVehicleNo() { return motorVehicleNo; }
     
     public String getConsigneeName() { return consigneeName; }
     public String getConsigneeAddress() { return consigneeAddress; }
@@ -87,4 +93,8 @@ public class Invoice {
     public String getBuyerAddress() { return buyerAddress; }
     public String getBuyerGst() { return buyerGst; }
     public String getBuyerState() { return buyerState; }
+    
+    private int bankLedgerId = -1;
+    public void setBankLedgerId(int id) { this.bankLedgerId = id; }
+    public int getBankLedgerId() { return bankLedgerId; }
 }

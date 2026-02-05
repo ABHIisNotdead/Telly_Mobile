@@ -9,9 +9,10 @@ public class InvoiceItem {
     private double cgstAmount;
     private double sgstAmount;
     private double igstAmount; // Optional for future use
+    private String hsn; // Added
     private String unit;
 
-    public InvoiceItem(String itemName, double quantity, double rate, double amount, double gstRate, double cgstAmount, double sgstAmount, String unit) {
+    public InvoiceItem(String itemName, double quantity, double rate, double amount, double gstRate, double cgstAmount, double sgstAmount, String unit, String hsn) {
         this.itemName = itemName;
         this.quantity = quantity;
         this.rate = rate;
@@ -20,11 +21,18 @@ public class InvoiceItem {
         this.cgstAmount = cgstAmount;
         this.sgstAmount = sgstAmount;
         this.unit = unit;
+        this.hsn = hsn;
     }
     
     // Constructor chaining for backward compatibility if needed, or update callers
+    // Constructor chaining
+    public InvoiceItem(String itemName, double quantity, double rate, double amount, double gstRate, double cgstAmount, double sgstAmount, String unit) {
+        this(itemName, quantity, rate, amount, gstRate, cgstAmount, sgstAmount, unit, "");
+    }
+    
+    // Legacy
     public InvoiceItem(String itemName, double quantity, double rate, double amount, double gstRate, double cgstAmount, double sgstAmount) {
-         this(itemName, quantity, rate, amount, gstRate, cgstAmount, sgstAmount, "");
+         this(itemName, quantity, rate, amount, gstRate, cgstAmount, sgstAmount, "", "");
     }
 
     public String getItemName() { return itemName; }
@@ -35,4 +43,5 @@ public class InvoiceItem {
     public double getCgstAmount() { return cgstAmount; }
     public double getSgstAmount() { return sgstAmount; }
     public String getUnit() { return unit; }
+    public String getHsn() { return hsn; }
 }
