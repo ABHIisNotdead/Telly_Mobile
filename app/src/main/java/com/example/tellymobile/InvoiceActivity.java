@@ -21,10 +21,10 @@ public class InvoiceActivity extends BaseActivity {
     private android.widget.AutoCompleteTextView actvItemName;
     private android.widget.Spinner spnCustomer, spnBankLedger;
     // Dispatch Fields
-    private EditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etDispatchDocNo, etDeliveryNoteDate, etDispatchThrough, etDestination, etTermsDelivery, etBillOfLading, etMotorVehicleNo;
+    private EditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etBuyersOrderDate, etDispatchDocNo, etDeliveryNoteDate, etDispatchThrough, etDestination, etTermsDelivery, etBillOfLading, etMotorVehicleNo;
     // Party Fields
-    private EditText etBuyerAddress, etBuyerGst, etBuyerState;
-    private EditText etConsigneeName, etConsigneeAddress, etConsigneeGst, etConsigneeState;
+    private EditText etBuyerAddress, etBuyerGst, etBuyerState, etBuyerEmail, etBuyerMobile;
+    private EditText etConsigneeName, etConsigneeAddress, etConsigneeGst, etConsigneeState, etConsigneeEmail, etConsigneeMobile;
     private TextView tvSubtotal, tvGrandTotal;
     private Button btnAddItem, btnSaveInvoice, btnPrintShare, btnExcelShare, btnAddCharge;
 
@@ -40,6 +40,9 @@ public class InvoiceActivity extends BaseActivity {
     private long updateId = -1;
     private long savedInvoiceId = -1;
     private String mode = "CREATE";
+    private int selectedCompanyId = 0;
+    private static final String PREFS_NAME = "TellyPrefs";
+    private static final String KEY_COMPANY_ID = "selected_company_id";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,8 +57,22 @@ public class InvoiceActivity extends BaseActivity {
         setupRecyclerViews();
         setupListeners();
         
+        // Load Company Context
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        selectedCompanyId = prefs.getInt(KEY_COMPANY_ID, 0);
+
+        // Auto-fill Date and Voucher No
+        if (etDate.getText().toString().isEmpty()) {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault());
+            etDate.setText(sdf.format(new java.util.Date()));
+        }
+        if (etInvoiceNo.getText().toString().isEmpty()) {
+            long nextNum = databaseHelper.getNextVoucherNumber("Sales", selectedCompanyId);
+            etInvoiceNo.setText(String.valueOf(nextNum));
+        }
+
         mode = getIntent().getStringExtra("MODE");
-         if ("EDIT".equals(mode)) {
+        if ("EDIT".equals(mode)) {
             updateId = getIntent().getIntExtra("ID", -1);
             if (updateId != -1) {
                 loadInvoiceData(updateId);
@@ -165,7 +182,9 @@ public class InvoiceActivity extends BaseActivity {
             safeSetText(etModePayment, cursor, "mode_payment");
             safeSetText(etRefNo, cursor, "reference_no");
             safeSetText(etOtherRef, cursor, "other_references");
+            safeSetText(etOtherRef, cursor, "other_references");
             safeSetText(etBuyerOrderNo, cursor, "buyers_order_no");
+            safeSetText(etBuyersOrderDate, cursor, "buyers_order_date");
             safeSetText(etDispatchDocNo, cursor, "dispatch_doc_no");
             safeSetText(etDeliveryNoteDate, cursor, "delivery_note_date");
             safeSetText(etDispatchThrough, cursor, "dispatch_through");
@@ -176,19 +195,36 @@ public class InvoiceActivity extends BaseActivity {
             
             safeSetText(etBuyerAddress, cursor, "buyer_address");
             safeSetText(etBuyerGst, cursor, "buyer_gst");
+            safeSetText(etBuyerGst, cursor, "buyer_gst");
             safeSetText(etBuyerState, cursor, "buyer_state");
+            safeSetText(etBuyerEmail, cursor, "buyer_email");
+            safeSetText(etBuyerMobile, cursor, "buyer_mobile");
             
             safeSetText(etConsigneeName, cursor, "consignee_name");
             safeSetText(etConsigneeAddress, cursor, "consignee_address");
             safeSetText(etConsigneeGst, cursor, "consignee_gst");
+            safeSetText(etConsigneeGst, cursor, "consignee_gst");
             safeSetText(etConsigneeState, cursor, "consignee_state");
+            safeSetText(etConsigneeEmail, cursor, "consignee_email");
+            safeSetText(etConsigneeMobile, cursor, "consignee_mobile");
             
+            double legacyDeliveryCharges = 0;
+            int dcIdx = cursor.getColumnIndex("delivery_charges");
+            if (dcIdx != -1) legacyDeliveryCharges = cursor.getDouble(dcIdx);
+
             cursor.close();
             
             // Load Items
             loadInvoiceItems(id);
             // Load Charges
             loadVoucherCharges(id);
+            
+            // Legacy Support: If no charges found in new table but delivery_charges exists in old column
+            if (chargesList.isEmpty() && legacyDeliveryCharges > 0) {
+                chargesList.add(new VoucherCharge(-1, "Delivery Charges", legacyDeliveryCharges, false, 0));
+                chargesAdapter.notifyDataSetChanged();
+                updateTotals();
+            }
         }
     }
     
@@ -247,11 +283,26 @@ public class InvoiceActivity extends BaseActivity {
         
         actvItemName.setOnItemClickListener((parent, view, position, id) -> {
              String selectedItem = (String) parent.getItemAtPosition(position);
-             double rate = databaseHelper.getItemRate(selectedItem);
-             if(rate > 0) {
+             android.database.Cursor c = databaseHelper.getItemDetailsByName(selectedItem);
+             if (c != null && c.moveToFirst()) {
+                 double rate = c.getDouble(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_RATE));
+                 String unit = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_UNIT));
+                 String hsn = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_HSN));
+                 double gstVal = c.getDouble(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_GST_RATE));
+                 String gstType = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_GST_TYPE));
+                 
                  etRate.setText(String.valueOf(rate));
+                 etUnit.setText(unit);
+                 etHsn.setText(hsn);
+                 
+                 double finalGstRate = gstVal;
+                 if ("Amount".equalsIgnoreCase(gstType) && rate > 0) {
+                     finalGstRate = (gstVal / rate) * 100;
+                 }
+                 etGstRate.setText(String.format("%.2f", finalGstRate));
+                 
+                 c.close();
              }
-             // Could also fetch unit, GST if DB helper supports it
         });
         
         // ... (Back logic)
@@ -264,6 +315,7 @@ public class InvoiceActivity extends BaseActivity {
         etRefNo = findViewById(R.id.etRefNo);
         etOtherRef = findViewById(R.id.etOtherRef);
         etBuyerOrderNo = findViewById(R.id.etBuyerOrderNo);
+        etBuyersOrderDate = findViewById(R.id.etBuyersOrderDate);
         etDispatchDocNo = findViewById(R.id.etDispatchDocNo);
         etDeliveryNoteDate = findViewById(R.id.etDeliveryNoteDate);
         etDispatchThrough = findViewById(R.id.etDispatchThrough);
@@ -276,10 +328,15 @@ public class InvoiceActivity extends BaseActivity {
         etBuyerAddress = findViewById(R.id.etBuyerAddress);
         etBuyerGst = findViewById(R.id.etBuyerGst);
         etBuyerState = findViewById(R.id.etBuyerState);
+        etBuyerEmail = findViewById(R.id.etBuyerEmail);
+        etBuyerMobile = findViewById(R.id.etBuyerMobile);
+        
         etConsigneeName = findViewById(R.id.etConsigneeName);
         etConsigneeAddress = findViewById(R.id.etConsigneeAddress);
         etConsigneeGst = findViewById(R.id.etConsigneeGst);
         etConsigneeState = findViewById(R.id.etConsigneeState);
+        etConsigneeEmail = findViewById(R.id.etConsigneeEmail);
+        etConsigneeMobile = findViewById(R.id.etConsigneeMobile);
         
         // Back Button Logic
         com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.topAppBar);
@@ -340,6 +397,14 @@ public class InvoiceActivity extends BaseActivity {
                      etConsigneeName.setText(customerName);
                      etConsigneeAddress.setText(addr);
                      etConsigneeGst.setText(gst);
+                     
+                     String email = c.getString(c.getColumnIndexOrThrow("email"));
+                     String mobile = c.getString(c.getColumnIndexOrThrow("mobile"));
+                     etBuyerEmail.setText(email);
+                     etBuyerMobile.setText(mobile);
+                     
+                     etConsigneeEmail.setText(email);
+                     etConsigneeMobile.setText(mobile);
                      c.close();
                  }
             }
@@ -352,47 +417,103 @@ public class InvoiceActivity extends BaseActivity {
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
         builder.setTitle("Add Charge / Tax");
         
-        // programmatically build layout
-        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
-        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
-        layout.setPadding(32, 32, 32, 32);
+        // Use Dialog Context for better theme support
+        android.content.Context dialogContext = builder.getContext();
         
-        final android.widget.Spinner spnLedger = new android.widget.Spinner(this);
+        // programmatically build layout
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(dialogContext);
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(dialogContext);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        layout.setPadding(48, 32, 48, 32);
+        scrollView.addView(layout);
+        
+        final android.widget.Spinner spnLedger = new android.widget.Spinner(dialogContext);
         // Filter for specific groups relevant to charges/taxes
         List<String> ledgers = new ArrayList<>();
         ledgers.addAll(databaseHelper.getLedgersByGroupList("Duties & Taxes"));
         ledgers.addAll(databaseHelper.getLedgersByGroupList("Indirect Expenses"));
         ledgers.addAll(databaseHelper.getLedgersByGroupList("Direct Expenses"));
         ledgers.addAll(databaseHelper.getLedgersByGroupList("Indirect Incomes")); 
-        
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ledgers);
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(dialogContext, android.R.layout.simple_spinner_dropdown_item, ledgers);
         spnLedger.setAdapter(adapter);
         layout.addView(spnLedger);
         
-        final EditText etValue = new EditText(this);
+        final EditText etValue = new android.widget.EditText(dialogContext);
         etValue.setHint("Amount or Rate (%)");
+        etValue.setHintTextColor(android.graphics.Color.GRAY);
+        etValue.setTextColor(android.graphics.Color.BLACK);
         etValue.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         layout.addView(etValue);
         
-        final android.widget.CheckBox cbIsPercentage = new android.widget.CheckBox(this);
+        final android.widget.CheckBox cbIsPercentage = new android.widget.CheckBox(dialogContext);
         cbIsPercentage.setText("Is Percentage (%)");
+        cbIsPercentage.setTextColor(android.graphics.Color.BLACK);
         layout.addView(cbIsPercentage);
+        
+        // Rounding Mode RadioGroup
+        final android.widget.TextView tvRoundMode = new android.widget.TextView(dialogContext);
+        tvRoundMode.setText("Select Rounding Logic:");
+        tvRoundMode.setTextColor(android.graphics.Color.parseColor("#3F51B5")); // Indigo
+        tvRoundMode.setPadding(0, 24, 0, 8);
+        tvRoundMode.setVisibility(View.GONE);
+        tvRoundMode.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+        layout.addView(tvRoundMode);
+
+        final android.widget.RadioGroup rgRoundMode = new android.widget.RadioGroup(dialogContext);
+        rgRoundMode.setOrientation(android.widget.RadioGroup.VERTICAL); 
+        rgRoundMode.setVisibility(View.GONE);
+        rgRoundMode.setPadding(32, 16, 16, 16); 
+        rgRoundMode.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+        
+        String[] modes = {"Auto (Nearest)", "Plus (+)", "Minus (-)"};
+        for (int i = 0; i < modes.length; i++) {
+            android.widget.RadioButton rb = new android.widget.RadioButton(dialogContext);
+            rb.setText(modes[i]);
+            rb.setId(i); 
+            rb.setTextColor(android.graphics.Color.BLACK);
+            rgRoundMode.addView(rb);
+        }
+        
+        // Load preference
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int lastMode = prefs.getInt("round_off_mode", 0); 
+        rgRoundMode.check(lastMode);
+        layout.addView(rgRoundMode);
+
         
         spnLedger.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 String selectedName = ledgers.get(position);
+                boolean isRoundOff = isRoundOffRefined(selectedName);
+                
+                tvRoundMode.setVisibility(isRoundOff ? View.VISIBLE : View.GONE);
+                rgRoundMode.setVisibility(isRoundOff ? View.VISIBLE : View.GONE);
+                etValue.setVisibility(isRoundOff ? View.GONE : View.VISIBLE);
+                cbIsPercentage.setVisibility(isRoundOff ? View.GONE : View.VISIBLE);
+                
+                // Force update UI
+                layout.requestLayout();
+                scrollView.fullScroll(View.FOCUS_UP);
+
                 android.database.Cursor c = databaseHelper.getLedgerDetails(selectedName);
                 if (c != null && c.moveToFirst()) {
                     int rateIdx = c.getColumnIndex("tax_rate");
                     int pctIdx = c.getColumnIndex("is_percentage");
                     
-                    if (rateIdx != -1) {
+                    if (rateIdx != -1 && !isRoundOff) {
                         double rate = c.getDouble(rateIdx);
                         if (rate > 0) etValue.setText(String.valueOf(rate));
                         else etValue.setText("");
                     }
-                    if (pctIdx != -1) {
+                    if (isRoundOff) {
+                        cbIsPercentage.setChecked(false);
+                        etValue.setText("0"); // Hidden but set to 0 to satisfy possible checks
+                    } else if (pctIdx != -1) {
                          cbIsPercentage.setChecked(c.getInt(pctIdx) == 1);
                     }
                     c.close();
@@ -401,16 +522,35 @@ public class InvoiceActivity extends BaseActivity {
             @Override
             public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
+
+        // Initial check immediately after setting listener
+        if (spnLedger.getSelectedItem() != null) {
+            boolean isRO = isRoundOffRefined(spnLedger.getSelectedItem().toString());
+            tvRoundMode.setVisibility(isRO ? View.VISIBLE : View.GONE);
+            rgRoundMode.setVisibility(isRO ? View.VISIBLE : View.GONE);
+            etValue.setVisibility(isRO ? View.GONE : View.VISIBLE);
+            cbIsPercentage.setVisibility(isRO ? View.GONE : View.VISIBLE);
+        }
         
-        builder.setView(layout);
+        builder.setView(scrollView);
         
         builder.setPositiveButton("Add", (dialog, which) -> {
             String ledgerName = (String) spnLedger.getSelectedItem();
+            if (ledgerName == null) return;
+            boolean isRoundOff = isRoundOffRefined(ledgerName);
             String valStr = etValue.getText().toString();
-            if (ledgerName != null && !valStr.isEmpty()) {
-                double val = Double.parseDouble(valStr);
-                boolean isPercent = cbIsPercentage.isChecked();
+            
+            if (isRoundOff || !valStr.isEmpty()) {
+                double val = isRoundOff ? 0 : Double.parseDouble(valStr);
+                boolean isPercent = isRoundOff ? false : cbIsPercentage.isChecked();
                 
+                if (isRoundOff) {
+                    // Save preference
+                    int mode = rgRoundMode.getCheckedRadioButtonId();
+                    if (mode == -1) mode = 0; // Fallback to Auto
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putInt("round_off_mode", mode).apply();
+                }
+
                 // Calculate amount initially
                 double amount = isPercent ? (subtotalAmount * val / 100) : val;
                 
@@ -475,6 +615,12 @@ public class InvoiceActivity extends BaseActivity {
         actvItemName.requestFocus();
     }
     
+    private boolean isRoundOffRefined(String name) {
+        if (name == null) return false;
+        String n = name.toLowerCase().replace(" ", "").replace("-", "").replace("_", "").trim();
+        return n.contains("roundoff") || (n.contains("round") && n.contains("off"));
+    }
+
     private void updateTotals() {
         subtotalAmount = 0;
         double itemTaxTotal = 0;
@@ -484,20 +630,54 @@ public class InvoiceActivity extends BaseActivity {
             itemTaxTotal += (item.getCgstAmount() + item.getSgstAmount());
         }
         
-        // Recalculate Charges (especially percentages based on new subtotal)
+        // Move Round Off to end if it exists
+        VoucherCharge roundOffCharge = null;
+        for (int i = 0; i < chargesList.size(); i++) {
+            if (chargesList.get(i).ledgerName.equalsIgnoreCase("Round Off")) {
+                roundOffCharge = chargesList.remove(i);
+                chargesList.add(roundOffCharge);
+                break;
+            }
+        }
+
+        // Recalculate Charges
         totalChargesAmount = 0;
+        double intermediateTotalBeforeRoundOff = subtotalAmount + itemTaxTotal;
+        
+        android.content.SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int roundMode = prefs.getInt("round_off_mode", 0); // 0: Auto, 1: Plus, 2: Minus
+
         for (VoucherCharge charge : chargesList) {
-            if (charge.isPercentage) {
+            if (charge.ledgerName.equalsIgnoreCase("Round Off")) {
+                // Calculate Round Off amount based on preference
+                double currentTotal = intermediateTotalBeforeRoundOff + totalChargesAmount;
+                double roundedTotal;
+                
+                switch (roundMode) {
+                    case 1: // Plus (+)
+                        roundedTotal = Math.ceil(currentTotal);
+                        break;
+                    case 2: // Minus (-)
+                        roundedTotal = Math.floor(currentTotal);
+                        break;
+                    default: // Auto (0)
+                        roundedTotal = Math.round(currentTotal);
+                        break;
+                }
+                
+                charge.amount = roundedTotal - currentTotal;
+                charge.isPercentage = false;
+            } else if (charge.isPercentage) {
                 charge.amount = subtotalAmount * (charge.rate / 100);
             }
             totalChargesAmount += charge.amount;
         }
-        if (chargesAdapter != null) chargesAdapter.notifyDataSetChanged(); // Refresh amounts in UI
+        
+        if (chargesAdapter != null) chargesAdapter.notifyDataSetChanged();
         
         grandTotalAmount = subtotalAmount + itemTaxTotal + totalChargesAmount;
         
         tvSubtotal.setText(String.format("₹%.2f", subtotalAmount));
-        // tvTotalTax removed
         tvGrandTotal.setText(String.format("Total: ₹%.2f", grandTotalAmount));
     }
 
@@ -546,7 +726,7 @@ public class InvoiceActivity extends BaseActivity {
             // Create New
             Invoice inv = createInvoiceObject();
 
-            savedInvoiceId = databaseHelper.addInvoiceObject(inv);
+            savedInvoiceId = databaseHelper.addInvoiceObject(inv, selectedCompanyId);
             
             if (savedInvoiceId != -1) {
                 for (InvoiceItem item : invoiceItemList) {
@@ -594,11 +774,18 @@ public class InvoiceActivity extends BaseActivity {
         }
         
         invoice.setDispatchDetails(etDeliveryNote.getText().toString(), etModePayment.getText().toString(), etRefNo.getText().toString(),
-                etOtherRef.getText().toString(), etBuyerOrderNo.getText().toString(), etDispatchDocNo.getText().toString(),
+                etOtherRef.getText().toString(), etBuyerOrderNo.getText().toString(), etBuyersOrderDate.getText().toString(), etDispatchDocNo.getText().toString(),
                 etDeliveryNoteDate.getText().toString(), etDispatchThrough.getText().toString(), etDestination.getText().toString(),
                 etTermsDelivery.getText().toString(), etBillOfLading.getText().toString(), etMotorVehicleNo.getText().toString());
-        invoice.setBuyerDetails(etBuyerAddress.getText().toString(), etBuyerGst.getText().toString(), etBuyerState.getText().toString());
-        invoice.setConsigneeDetails(etConsigneeName.getText().toString(), etConsigneeAddress.getText().toString(), etConsigneeGst.getText().toString(), etConsigneeState.getText().toString());
+        invoice.setBuyerDetails(etBuyerAddress.getText().toString(), etBuyerGst.getText().toString(), etBuyerState.getText().toString(), etBuyerEmail.getText().toString(), etBuyerMobile.getText().toString());
+        invoice.setConsigneeDetails(etConsigneeName.getText().toString(), etConsigneeAddress.getText().toString(), etConsigneeGst.getText().toString(), etConsigneeState.getText().toString(), etConsigneeEmail.getText().toString(), etConsigneeMobile.getText().toString());
+        
+        List<InvoiceCharge> invoiceCharges = new ArrayList<>();
+        for (VoucherCharge vc : chargesList) {
+             invoiceCharges.add(new InvoiceCharge(vc.ledgerName, vc.amount, vc.rate, vc.isPercentage));
+        }
+        invoice.setExtraCharges(invoiceCharges);
+        
         return invoice;
     }
 

@@ -42,6 +42,7 @@ public class InvoiceItem {
     public double getGstRate() { return gstRate; }
     public double getCgstAmount() { return cgstAmount; }
     public double getSgstAmount() { return sgstAmount; }
+    public double getIgstAmount() { return igstAmount; }
     public String getUnit() { return unit; }
     public String getHsn() { return hsn; }
 }

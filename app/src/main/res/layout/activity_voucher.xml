@@ -19,6 +19,7 @@
             app:title="Voucher Entry"
             app:titleTextColor="?attr/colorOnPrimary"
             app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/white"
             style="@style/Widget.Material3.Toolbar.Surface" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -129,6 +130,7 @@
                     android:orientation="vertical">
 
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilPartyName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Party A/c Name"
@@ -142,6 +144,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
             
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilBankLedger"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginHorizontal="8dp"

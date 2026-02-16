@@ -53,6 +53,44 @@ public class MainPage extends BaseActivity {
         }
     );
 
+    // Backup Launcher
+    private final androidx.activity.result.ActivityResultLauncher<String> createBackupLauncher = registerForActivityResult(
+        new androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/x-sqlite3"),
+        uri -> {
+            if (uri != null) {
+                BackupUtils.backupToUri(this, uri);
+            }
+        }
+    );
+
+    // Restore Launcher
+    private final androidx.activity.result.ActivityResultLauncher<String[]> openRestoreLauncher = registerForActivityResult(
+        new androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        uri -> {
+            if (uri != null) {
+                showRestoreConfirmationDialog1(uri);
+            }
+        }
+    );
+
+    private void showRestoreConfirmationDialog1(android.net.Uri uri) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Restore Backup")
+            .setMessage("Are you sure you want to restore? This will replace your current data with the selected backup.")
+            .setPositiveButton("Yes", (dialog, which) -> showRestoreConfirmationDialog2(uri))
+            .setNegativeButton("No", null)
+            .show();
+    }
+
+    private void showRestoreConfirmationDialog2(android.net.Uri uri) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Confirm Restore")
+            .setMessage("WARNING: This action is irreversible. All current data will be LOST. Do you really want to proceed?")
+            .setPositiveButton("YES, RESTORE", (dialog, which) -> BackupUtils.restoreFromUri(this, uri))
+            .setNegativeButton("CANCEL", null)
+            .show();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -145,10 +183,10 @@ public class MainPage extends BaseActivity {
             startActivity(new Intent(MainPage.this, MessageActivity.class));
             return true;
         } else if (item.getItemId() == R.id.action_backup) {
-            BackupUtils.backupDatabase(MainPage.this);
+            createBackupLauncher.launch("TellyMobile_Backup.db");
             return true;
         } else if (item.getItemId() == R.id.action_restore) {
-            BackupUtils.restoreDatabase(MainPage.this);
+             openRestoreLauncher.launch(new String[]{"*/*"}); // Open any file, let Utils handle or fail if invalid content
             return true;
         }
         return super.onOptionsItemSelected(item);

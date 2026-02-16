@@ -16,7 +16,8 @@ import java.util.List;
 
 public class PurchaseActivity extends BaseActivity {
 
-    private TextInputEditText etInvoiceNo, etDate, etSupplierName, etItemName, etQuantity, etRate;
+    private TextInputEditText etInvoiceNo, etDate, etSupplierName, etQuantity, etUnit, etRate, etHsn;
+    private android.widget.AutoCompleteTextView etItemName;
     private Button btnAddItem, btnSavePurchase;
     private RecyclerView rvInvoiceItems;
     private InvoiceAdapter adapter; // Reusing InvoiceAdapter since logic is same
@@ -41,8 +42,10 @@ public class PurchaseActivity extends BaseActivity {
         etInvoiceNo = findViewById(R.id.etInvoiceNo);
         etDate = findViewById(R.id.etDate);
         etSupplierName = findViewById(R.id.etSupplierName);
-        etItemName = findViewById(R.id.etItemName);
+        etItemName = (android.widget.AutoCompleteTextView) findViewById(R.id.etItemName);
         etQuantity = findViewById(R.id.etQuantity);
+        etUnit = findViewById(R.id.etUnit);
+        etHsn = findViewById(R.id.etHsn);
         etRate = findViewById(R.id.etRate);
         
         // Note: Total Amount logic in UI is currently just a TextView update, need to bind it
@@ -52,6 +55,16 @@ public class PurchaseActivity extends BaseActivity {
         btnAddItem = findViewById(R.id.btnAddItem);
         btnSavePurchase = findViewById(R.id.btnSaveInvoice); // Reused ID in XML: btnSaveInvoice for Save Purchase
         rvInvoiceItems = findViewById(R.id.rvInvoiceItems);
+
+        com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.topAppBar);
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                getSupportActionBar().setDisplayShowHomeEnabled(true);
+            }
+            toolbar.setNavigationOnClickListener(v -> finish());
+        }
     }
 
     private void setupRecyclerView() {
@@ -61,6 +74,26 @@ public class PurchaseActivity extends BaseActivity {
     }
 
     private void setupListeners() {
+        // Setup Item Name Autocomplete
+        List<String> itemNames = databaseHelper.getAllItemNames();
+        android.widget.ArrayAdapter<String> itemAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, itemNames);
+        etItemName.setAdapter(itemAdapter);
+
+        etItemName.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedItem = (String) parent.getItemAtPosition(position);
+            android.database.Cursor c = databaseHelper.getItemDetailsByName(selectedItem);
+            if (c != null && c.moveToFirst()) {
+                double rate = c.getDouble(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_RATE));
+                String unit = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_UNIT));
+                String hsn = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_HSN));
+                
+                etRate.setText(String.valueOf(rate));
+                etUnit.setText(unit);
+                etHsn.setText(hsn);
+                c.close();
+            }
+        });
+
         btnAddItem.setOnClickListener(v -> addItem());
         btnSavePurchase.setOnClickListener(v -> savePurchase());
     }
@@ -68,6 +101,8 @@ public class PurchaseActivity extends BaseActivity {
     private void addItem() {
         String name = etItemName.getText().toString();
         String qtyStr = etQuantity.getText().toString();
+        String unit = etUnit.getText().toString();
+        String hsn = etHsn.getText().toString();
         String rateStr = etRate.getText().toString();
 
         if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
@@ -79,7 +114,7 @@ public class PurchaseActivity extends BaseActivity {
         double rate = Double.parseDouble(rateStr);
         double amount = qty * rate;
 
-        InvoiceItem item = new InvoiceItem(name, qty, rate, amount, 0, 0, 0);
+        InvoiceItem item = new InvoiceItem(name, qty, rate, amount, 0, 0, 0, unit, hsn);
         purchaseItemList.add(item);
         adapter.notifyDataSetChanged();
 
@@ -90,6 +125,8 @@ public class PurchaseActivity extends BaseActivity {
         etItemName.setText("");
         etQuantity.setText("");
         etRate.setText("");
+        etUnit.setText("");
+        etHsn.setText("");
     }
     
     private void updateTotalDisplay() {
@@ -113,7 +150,7 @@ public class PurchaseActivity extends BaseActivity {
         
         if (savedId != -1) {
             for (InvoiceItem item : purchaseItemList) {
-                databaseHelper.addPurchaseItem(savedId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount());
+                databaseHelper.addPurchaseItem(savedId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getUnit(), item.getHsn());
             }
             Toast.makeText(this, "Purchase Saved & Stock Updated!", Toast.LENGTH_LONG).show();
             finish(); // Close activity

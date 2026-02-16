@@ -17,6 +17,7 @@
             app:title="Notifications"
             app:titleTextColor="?attr/colorOnPrimary"
             app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="?attr/colorOnPrimary"
             style="@style/Widget.Material3.Toolbar.Surface" />
     </com.google.android.material.appbar.AppBarLayout>
 

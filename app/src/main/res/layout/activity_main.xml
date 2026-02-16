@@ -61,6 +61,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Create Master"
+                        app:icon="@drawable/ic_add"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_marginBottom="8dp"/>
 
@@ -75,7 +76,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Alter"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            app:icon="@drawable/ic_edit"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_marginEnd="4dp"/>
 
                         <Button
@@ -84,7 +86,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Chart of A/c"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            app:icon="@drawable/ic_account_tree"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_marginStart="4dp"/>
                     </LinearLayout>
                 </LinearLayout>
@@ -112,6 +115,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Voucher Entry"
+                        app:icon="@drawable/ic_receipt"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_marginBottom="8dp"/>
 
@@ -126,6 +130,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Vouchers"
+                            app:icon="@drawable/ic_list_alt"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_marginEnd="4dp"/>
 
@@ -135,6 +140,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Day Book"
+                            app:icon="@drawable/ic_book"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_marginStart="4dp"/>
                     </LinearLayout>
@@ -164,8 +170,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Sales &amp; Graphs"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:strokeColor="@color/primary"/>
+                        app:icon="@drawable/ic_bar_chart"
+                        style="@style/Widget.Material3.Button.TonalButton"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -10,61 +10,100 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-public class DayBookAdapter extends RecyclerView.Adapter<DayBookAdapter.ViewHolder> {
+public class DayBookAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private List<DatabaseHelper.VoucherSummary> voucherList;
+    private List<Object> items;
     private OnItemClickListener listener;
 
+    private static final int TYPE_HEADER = 0;
+    private static final int TYPE_ITEM = 1;
+
     public interface OnItemClickListener {
-        void onItemClick(DatabaseHelper.VoucherSummary voucher); // View
+        void onItemClick(DatabaseHelper.VoucherSummary voucher);
         void onEditClick(DatabaseHelper.VoucherSummary voucher);
         void onDeleteClick(DatabaseHelper.VoucherSummary voucher);
     }
 
-    public DayBookAdapter(List<DatabaseHelper.VoucherSummary> list, OnItemClickListener listener) {
-        this.voucherList = list;
+    public DayBookAdapter(List<Object> list, OnItemClickListener listener) {
+        this.items = list;
         this.listener = listener;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return (items.get(position) instanceof String) ? TYPE_HEADER : TYPE_ITEM;
     }
 
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_daybook_row, parent, false);
-        return new ViewHolder(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        if (viewType == TYPE_HEADER) {
+            View view = inflater.inflate(R.layout.item_daybook_header, parent, false);
+            return new HeaderViewHolder(view);
+        } else {
+            View view = inflater.inflate(R.layout.item_daybook_row, parent, false);
+            return new VoucherViewHolder(view);
+        }
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        DatabaseHelper.VoucherSummary voucher = voucherList.get(position);
-        holder.bind(voucher, listener);
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (getItemViewType(position) == TYPE_HEADER) {
+            ((HeaderViewHolder) holder).tvHeader.setText((String) items.get(position));
+        } else {
+            ((VoucherViewHolder) holder).bind((DatabaseHelper.VoucherSummary) items.get(position), listener);
+        }
     }
 
     @Override
     public int getItemCount() {
-        return voucherList.size();
+        return items.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvType, tvDate, tvParty, tvAmount, tvNo;
-        android.widget.Button btnEdit, btnDelete; // Use android.widget.Button to be safe or Button
+    public void updateList(List<Object> newList) {
+        this.items = newList;
+        notifyDataSetChanged();
+    }
 
-        public ViewHolder(@NonNull View itemView) {
+    public static class HeaderViewHolder extends RecyclerView.ViewHolder {
+        TextView tvHeader;
+        public HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvHeader = itemView.findViewById(R.id.tvDateHeader);
+        }
+    }
+
+    public static class VoucherViewHolder extends RecyclerView.ViewHolder {
+        TextView tvType, tvDate, tvParty, tvAmount, tvNo;
+        android.widget.Button btnEdit, btnDelete;
+
+        public VoucherViewHolder(@NonNull View itemView) {
             super(itemView);
             tvType = itemView.findViewById(R.id.tvVoucherType);
             tvDate = itemView.findViewById(R.id.tvDate);
             tvParty = itemView.findViewById(R.id.tvPartyName);
             tvAmount = itemView.findViewById(R.id.tvAmount);
-             tvNo = itemView.findViewById(R.id.tvVoucherNo);
-             btnEdit = itemView.findViewById(R.id.btnEdit);
-             btnDelete = itemView.findViewById(R.id.btnDelete);
+            tvNo = itemView.findViewById(R.id.tvVoucherNo);
+            btnEdit = itemView.findViewById(R.id.btnEdit);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
         }
 
         public void bind(final DatabaseHelper.VoucherSummary voucher, final OnItemClickListener listener) {
             tvType.setText(voucher.type);
             tvDate.setText(voucher.date);
             tvParty.setText(voucher.partyName);
-            tvAmount.setText("₹" + voucher.amount);
+            tvAmount.setText("₹" + String.format("%.2f", voucher.amount));
             tvNo.setText("#" + voucher.voucherNo);
+
+            // Type-based styling
+            int color = 0xFF3F51B5; // Default primary
+            if (voucher.type.equalsIgnoreCase("Sales") || voucher.type.equalsIgnoreCase("Receipt")) {
+                color = 0xFF4CAF50; // Green for inflow
+            } else if (voucher.type.equalsIgnoreCase("Purchase") || voucher.type.equalsIgnoreCase("Payment")) {
+                color = 0xFFF44336; // Red for outflow
+            }
+            tvType.setTextColor(color);
 
             itemView.setOnClickListener(v -> listener.onItemClick(voucher));
             btnEdit.setOnClickListener(v -> listener.onEditClick(voucher));

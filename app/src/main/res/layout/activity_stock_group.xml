@@ -18,6 +18,7 @@
             app:title="Create Stock Group"
             app:titleTextColor="?attr/colorOnPrimary"
             app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/white"
             android:background="?attr/colorPrimary"/>
 
     </com.google.android.material.appbar.AppBarLayout>

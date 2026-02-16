@@ -31,6 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
+            android:paddingEnd="4dp"
             android:text="Qty" 
             android:textColor="@color/text_secondary"/>
 
@@ -40,6 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
+            android:paddingEnd="4dp"
             android:text="Rate" 
             android:textColor="@color/text_secondary"/>
 
@@ -55,7 +57,7 @@
             
         <ImageButton
             android:id="@+id/btnDelete"
-            android:layout_width="wrap_content"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_delete"
             android:background="?attr/selectableItemBackgroundBorderless"

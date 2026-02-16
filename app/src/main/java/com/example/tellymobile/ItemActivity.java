@@ -18,8 +18,8 @@ import java.util.List;
 
 public class ItemActivity extends BaseActivity {
 
-    private TextInputEditText etName, etHsn, etRate, etStock;
-    private AutoCompleteTextView actvUnit;
+    private TextInputEditText etName, etHsn, etRate, etStock, etGstValue;
+    private AutoCompleteTextView actvUnit, actvGstType;
     private android.widget.Spinner spnStockGroup, spnStockCategory;
     private Button btnSave;
     private DatabaseHelper databaseHelper;
@@ -57,7 +57,13 @@ public class ItemActivity extends BaseActivity {
             }
             actvUnit.setText(cursor.getString(cursor.getColumnIndexOrThrow("unit")));
             etRate.setText(String.valueOf(cursor.getDouble(cursor.getColumnIndexOrThrow("rate"))));
-             etStock.setText(String.valueOf(cursor.getDouble(cursor.getColumnIndexOrThrow("stock_quantity"))));
+            etStock.setText(String.valueOf(cursor.getDouble(cursor.getColumnIndexOrThrow("stock_quantity"))));
+            
+            // GST
+            int gstRateIdx = cursor.getColumnIndex("gst_rate");
+            if (gstRateIdx != -1) etGstValue.setText(String.valueOf(cursor.getDouble(gstRateIdx)));
+            int gstTypeIdx = cursor.getColumnIndex("gst_type");
+            if (gstTypeIdx != -1) actvGstType.setText(cursor.getString(gstTypeIdx), false);
              
             // Set Spinners
             setSpinnerSelection(spnStockGroup, cursor, "stock_group");
@@ -99,9 +105,12 @@ public class ItemActivity extends BaseActivity {
         spnStockCategory = findViewById(R.id.spnStockCategory);
         etRate = findViewById(R.id.etRate);
         etStock = findViewById(R.id.etStock);
+        etGstValue = findViewById(R.id.etGstValue);
+        actvGstType = findViewById(R.id.actvGstType);
         btnSave = findViewById(R.id.btnSave);
         
         setupUnitAdapter();
+        setupGstTypeAdapter();
         setupSpinners();
     }
     
@@ -121,6 +130,12 @@ public class ItemActivity extends BaseActivity {
         }
         ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
         spnStockCategory.setAdapter(catAdapter);
+    }
+
+    private void setupGstTypeAdapter() {
+        String[] types = {"Percentage", "Amount"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, types);
+        actvGstType.setAdapter(adapter);
     }
     
     // Unit List Logic
@@ -199,6 +214,8 @@ public class ItemActivity extends BaseActivity {
         
         String group = spnStockGroup.getSelectedItem() != null ? spnStockGroup.getSelectedItem().toString() : "Primary";
         String category = spnStockCategory.getSelectedItem() != null ? spnStockCategory.getSelectedItem().toString() : "Primary";
+        String gstValStr = etGstValue.getText().toString().trim();
+        String gstType = actvGstType.getText().toString().trim();
 
         if (name.isEmpty()) {
             Toast.makeText(this, "Item Name is required", Toast.LENGTH_SHORT).show();
@@ -212,12 +229,13 @@ public class ItemActivity extends BaseActivity {
 
         double rate = rateStr.isEmpty() ? 0.0 : Double.parseDouble(rateStr);
         double stock = stockStr.isEmpty() ? 0.0 : Double.parseDouble(stockStr);
+        double gstVal = gstValStr.isEmpty() ? 0.0 : Double.parseDouble(gstValStr);
 
         if ("EDIT".equals(mode) && updateId != -1) {
-            databaseHelper.updateItem(updateId, name, rate, unit, stock, hsn, group, category);
+            databaseHelper.updateItem(updateId, name, rate, unit, stock, hsn, group, category, gstVal, gstType);
             Toast.makeText(this, "Item Updated Successfully", Toast.LENGTH_SHORT).show();
         } else {
-            databaseHelper.addItem(name, rate, unit, stock, hsn, group, category);
+            databaseHelper.addItem(name, rate, unit, stock, hsn, group, category, gstVal, gstType);
             Toast.makeText(this, "Item Saved Successfully", Toast.LENGTH_SHORT).show();
         }
         finish();

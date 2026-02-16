@@ -40,7 +40,13 @@ public class InvoiceAdapter extends RecyclerView.Adapter<InvoiceAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         InvoiceItem item = invoiceItems.get(position);
         holder.tvItemName.setText(item.getItemName());
-        holder.tvQty.setText(String.valueOf(item.getQuantity()));
+        
+        String qtyStr = String.valueOf(item.getQuantity());
+        if (item.getUnit() != null && !item.getUnit().isEmpty()) {
+            qtyStr += " " + item.getUnit();
+        }
+        holder.tvQty.setText(qtyStr);
+        
         holder.tvRate.setText(String.valueOf(item.getRate()));
         holder.tvAmount.setText(String.valueOf(item.getAmount()));
         

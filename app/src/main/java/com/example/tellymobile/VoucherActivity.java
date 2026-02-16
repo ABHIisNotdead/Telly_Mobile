@@ -1,4 +1,4 @@
-package com.example.tellymobile;
+﻿package com.example.tellymobile;
 
 import android.database.Cursor;
 import android.os.Bundle;
@@ -41,6 +41,7 @@ public class VoucherActivity extends BaseActivity {
     private Button btnToggleDispatch;
     private TextInputEditText etDispatchDocNo, etDestination, etDispatchThrough, etMotorVehicleNo;
     private TextInputEditText etDeliveryNote, etModePayment, etRefNo, etOtherRef, etBuyerOrderNo, etDeliveryNoteDate, etTermsDelivery, etBillOfLading;
+    private EditText etPaymentAmount; // New Field for Payment Amount
     
     private LinearLayout llPartyInfo, llInventorySection;
     private Button btnAddItem, btnSave, btnAddCharge, btnViewPdf;
@@ -58,6 +59,7 @@ public class VoucherActivity extends BaseActivity {
     private int selectedCompanyId = 0; // Default 0
     private static final String PREFS_NAME = "TellyPrefs";
     private static final String KEY_COMPANY_ID = "selected_company_id";
+    private static final String KEY_LAST_PAYMENT_ACCOUNT = "last_payment_account";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +86,7 @@ public class VoucherActivity extends BaseActivity {
             
             // Auto-fill Date
             if (etDate.getText().toString().isEmpty()) {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault());
                 etDate.setText(sdf.format(new java.util.Date()));
             }
             
@@ -165,6 +167,38 @@ public class VoucherActivity extends BaseActivity {
         tvTotalAmount = findViewById(R.id.tvTotalAmount);
         btnSave = findViewById(R.id.btnSave);
         btnViewPdf = findViewById(R.id.btnViewPdf);
+
+        // Payment Amount Field & Add Button Initialization
+        LinearLayout llPaymentRow = new LinearLayout(this);
+        llPaymentRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.setMargins(0, 16, 0, 16);
+        llPaymentRow.setLayoutParams(rowParams);
+
+        etPaymentAmount = new EditText(this);
+        etPaymentAmount.setHint("Amount â‚¹");
+        etPaymentAmount.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        LinearLayout.LayoutParams etParams = new LinearLayout.LayoutParams(
+                0, 
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        etPaymentAmount.setLayoutParams(etParams);
+        
+        Button btnAddLine = new Button(this);
+        btnAddLine.setText("+");
+        btnAddLine.setOnClickListener(v -> addPaymentLine());
+        
+        llPaymentRow.addView(etPaymentAmount);
+        llPaymentRow.addView(btnAddLine);
+        
+        llPaymentRow.setVisibility(View.GONE); // Initially GONE
+        
+        // Store reference to this wrapper layout to toggle visibility instead of etPaymentAmount directly if needed
+        // For now, I'll tag it or just keep reference if I made it a field, but for simplicity:
+        etPaymentAmount.setTag(llPaymentRow); // Hack to access parent layout for visibility toggling
+        
+        if(llPartyInfo != null) llPartyInfo.addView(llPaymentRow); // Adding to Party Info container
     }
     
     private void loadCompanyDetails() {
@@ -193,7 +227,7 @@ public class VoucherActivity extends BaseActivity {
     }
 
     private void setupVoucherTypeSpinner() {
-        String[] voucherTypes = {"Sales", "Purchase", "Receipt", "Payment"};
+        String[] voucherTypes = {"Sales", "Purchase", "Receipt", "Payment", "Journal", "Contra"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, voucherTypes);
         spnVoucherType.setAdapter(adapter);
 
@@ -201,21 +235,45 @@ public class VoucherActivity extends BaseActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String type = voucherTypes[position];
+                
+                // Reset common visibility
+                llInventorySection.setVisibility(View.GONE);
+                findViewById(R.id.tilPartyName).setVisibility(View.VISIBLE);
+                findViewById(R.id.tilBankLedger).setVisibility(View.GONE);
+                llPartyInfo.setVisibility(View.GONE);
+                if(etPaymentAmount.getTag() instanceof View) ((View)etPaymentAmount.getTag()).setVisibility(View.GONE);
+
                 if (type.equals("Sales") || type.equals("Purchase")) {
                     llInventorySection.setVisibility(View.VISIBLE);
-                } else {
-                    llInventorySection.setVisibility(View.GONE);
+                    ((com.google.android.material.textfield.TextInputLayout)findViewById(R.id.tilPartyName)).setHint("Party Name");
+                     if(!actvPartyName.getText().toString().isEmpty()) llPartyInfo.setVisibility(View.VISIBLE);
+                } else if (type.equals("Payment") || type.equals("Receipt")) {
+                    String hint = type.equals("Payment") ? "Account (Paid To)" : "Account (Received From)";
+                    ((com.google.android.material.textfield.TextInputLayout)findViewById(R.id.tilPartyName)).setHint(hint);
+                    findViewById(R.id.tilBankLedger).setVisibility(View.VISIBLE);
+                    ((com.google.android.material.textfield.TextInputLayout)findViewById(R.id.tilBankLedger)).setHint("Through (Bank/Cash)");
+                    
+                    if(etPaymentAmount.getTag() instanceof View) ((View)etPaymentAmount.getTag()).setVisibility(View.VISIBLE);
+                    llPartyInfo.setVisibility(View.VISIBLE);
+                } else if (type.equals("Journal") || type.equals("Contra")) {
+                    findViewById(R.id.tilPartyName).setVisibility(View.GONE);
+                    llPartyInfo.setVisibility(View.VISIBLE);
+                    btnAddCharge.setText("Add Entry (Dr/Cr)");
+                }
+
+                if (!type.equals("Journal") && !type.equals("Contra")) {
+                    btnAddCharge.setText("Add Charge / Tax");
                 }
                 
-                // Auto-fill Logic if fields are empty or default
-                if (etVoucherNo.getText().toString().isEmpty()) {
-                    long nextNum = databaseHelper.getNextVoucherNumber(type);
+                // Auto-fill Logic
+                if (etVoucherNo.getText().toString().isEmpty() || etVoucherNo.getTag() == null) {
+                    long nextNum = databaseHelper.getNextVoucherNumber(type, selectedCompanyId);
                     etVoucherNo.setText(String.valueOf(nextNum));
+                    etVoucherNo.setTag("AUTO");
                 }
                 
                 updatePartyAutocomplete(type);
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -239,9 +297,25 @@ public class VoucherActivity extends BaseActivity {
         
         actvItemName.setOnItemClickListener((parent, view, position, id) -> {
              String selectedItem = (String) parent.getItemAtPosition(position);
-             double rate = databaseHelper.getItemRate(selectedItem);
-             if(rate > 0) {
+             android.database.Cursor c = databaseHelper.getItemDetailsByName(selectedItem);
+             if (c != null && c.moveToFirst()) {
+                 double rate = c.getDouble(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_RATE));
+                 String unit = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_UNIT));
+                 String hsn = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_HSN));
+                 double gstVal = c.getDouble(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_GST_RATE));
+                 String gstType = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ITEM_GST_TYPE));
+                 
                  etRate.setText(String.valueOf(rate));
+                 etUnit.setText(unit);
+                 etHsn.setText(hsn);
+                 
+                 double finalGstRate = gstVal;
+                 if ("Amount".equalsIgnoreCase(gstType) && rate > 0) {
+                     finalGstRate = (gstVal / rate) * 100;
+                 }
+                 etGstRate.setText(String.format("%.2f", finalGstRate));
+                 
+                 c.close();
              }
         });
     }
@@ -251,9 +325,17 @@ public class VoucherActivity extends BaseActivity {
         if ("Sales".equals(type) || "Receipt".equals(type)) {
             partyNames.addAll(databaseHelper.getLedgersByGroupList("Sundry Debtors"));
             partyNames.add("Cash");
-        } else if ("Purchase".equals(type) || "Payment".equals(type)) {
+        } else if ("Purchase".equals(type)) {
             partyNames.addAll(databaseHelper.getLedgersByGroupList("Sundry Creditors"));
             partyNames.add("Cash");
+        } else if ("Payment".equals(type)) {
+            // For Payment, "Party" is not used in the main header in this design (it's in Particulars/Charges)
+            // But "Through" (Bank Ledger) needs to be populated
+             List<String> bankLedgers = databaseHelper.getLedgersByGroupList("Bank Accounts");
+             bankLedgers.add("Cash");
+             ArrayAdapter<String> bankAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, bankLedgers);
+             actvBankLedger.setAdapter(bankAdapter);
+             return;
         } else {
              // Fallback to all if unknown type
              partyNames = databaseHelper.getAllLedgerNames(); 
@@ -262,7 +344,7 @@ public class VoucherActivity extends BaseActivity {
         ArrayAdapter<String> partyAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, partyNames);
         actvPartyName.setAdapter(partyAdapter);
         
-        // Setup Bank Ledger Adapter
+        // Setup Bank Ledger Adapter for Invoice Settings (Optional for Sales)
         List<String> bankLedgers = databaseHelper.getLedgersByGroupList("Bank Accounts");
         ArrayAdapter<String> bankAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, bankLedgers);
         actvBankLedger.setAdapter(bankAdapter);
@@ -317,122 +399,38 @@ public class VoucherActivity extends BaseActivity {
     private void loadVoucherData(int id, String type) {
         Cursor cursor = databaseHelper.getVoucher(id, type);
         if (cursor != null && cursor.moveToFirst()) {
-            if (type.equals("Sales")) {
-                etVoucherNo.setText(cursor.getString(cursor.getColumnIndexOrThrow("invoice_number")));
+            if (type.equals("Sales") || type.equals("Purchase")) {
+                etVoucherNo.setText(cursor.getString(cursor.getColumnIndexOrThrow(type.equals("Sales") ? "invoice_number" : "purchase_number")));
                 etDate.setText(cursor.getString(cursor.getColumnIndexOrThrow("date")));
-                actvPartyName.setText(cursor.getString(cursor.getColumnIndexOrThrow("customer_name")));
+                actvPartyName.setText(cursor.getString(cursor.getColumnIndexOrThrow(type.equals("Sales") ? "customer_name" : "party_name")));
                 totalAmount = cursor.getDouble(cursor.getColumnIndexOrThrow("total_amount"));
-            } else {
-                etVoucherNo.setText(cursor.getString(cursor.getColumnIndexOrThrow("purchase_inv_no")));
-                etDate.setText(cursor.getString(cursor.getColumnIndexOrThrow("purchase_date")));
-                actvPartyName.setText(cursor.getString(cursor.getColumnIndexOrThrow("supplier_name")));
-                totalAmount = cursor.getDouble(cursor.getColumnIndexOrThrow("purchase_total"));
+                
+                loadVoucherItems(id, type);
+                loadVoucherCharges(id, type);
+            } else if (type.equals("Payment") || type.equals("Receipt")) {
+                String vNo = cursor.getString(cursor.getColumnIndexOrThrow(type.equals("Payment") ? "voucher_no" : "receipt_no"));
+                String date = cursor.getString(cursor.getColumnIndexOrThrow(type.equals("Payment") ? "date" : "receipt_date"));
+                String narration = cursor.getString(cursor.getColumnIndexOrThrow(type.equals("Payment") ? "narration" : "receipt_narration"));
+                
+                etVoucherNo.setText(vNo);
+                etDate.setText(date);
+                etDeliveryNote.setText(narration);
+                
+                if (type.equals("Payment")) {
+                    actvPartyName.setText(cursor.getString(cursor.getColumnIndexOrThrow("party_name")));
+                    actvBankLedger.setText(cursor.getString(cursor.getColumnIndexOrThrow("through_ledger")));
+                }
+                loadVoucherCharges(id, type);
+            } else if (type.equals("Journal") || type.equals("Contra")) {
+                etVoucherNo.setText(cursor.getString(cursor.getColumnIndexOrThrow("journal_no")));
+                etDate.setText(cursor.getString(cursor.getColumnIndexOrThrow("journal_date")));
+                etDeliveryNote.setText(cursor.getString(cursor.getColumnIndexOrThrow("journal_narration")));
+                loadVoucherCharges(id, type);
             }
             cursor.close();
-            
-            // tvTotalAmount.setText("Total: ₹" + totalAmount); // Will be updated by load functions
-            fetchAndPopulatePartyDetails(actvPartyName.getText().toString());
-            
-            // Set Spinner Selection
-            for (int i = 0; i < spnVoucherType.getCount(); i++) {
-                if (spnVoucherType.getItemAtPosition(i).toString().equals(type)) {
-                    spnVoucherType.setSelection(i);
-                    break;
-                }
-            }
-            
-            // Load Items
-            loadVoucherItems(id, type);
-            // Load Charges
-            loadVoucherCharges(id, type);
-            
-            // Disable Editing
             disableEditing();
         }
     }
-
-    // ... (loadVoucherItems, loadVoucherCharges, disableEditing, addItem are already defined/updated)
-
-    private void saveVoucher() {
-        String type = spnVoucherType.getSelectedItem().toString();
-        String voucherNo = etVoucherNo.getText().toString();
-        String date = etDate.getText().toString();
-        String partyName = actvPartyName.getText().toString();
-
-        if (voucherNo.isEmpty() || date.isEmpty() || partyName.isEmpty()) {
-             Toast.makeText(this, "Please fill basic voucher details", Toast.LENGTH_SHORT).show();
-             return;
-        }
-        
-        if ((type.equals("Sales") || type.equals("Purchase")) && itemList.isEmpty()) {
-             Toast.makeText(this, "Please add items for this voucher", Toast.LENGTH_SHORT).show();
-             return;
-        }
-
-        long result = -1;
-        
-        // Calculate Item Tax Total for Sales
-        double itemTaxTotal = 0;
-        for (InvoiceItem item : itemList) {
-            itemTaxTotal += (item.getCgstAmount() + item.getSgstAmount());
-        }
-        
-        if (type.equals("Sales")) {
-            // Create Full Invoice Object
-            Invoice inv = createInvoiceObject(voucherNo, date, partyName, itemTaxTotal);
-            
-            // Set Bank Ledger ID
-            String selectedBank = actvBankLedger.getText().toString();
-            if (!selectedBank.isEmpty()) {
-                Cursor flags = databaseHelper.getLedgerDetails(selectedBank);
-                if (flags != null && flags.moveToFirst()) {
-                     try {
-                          int idIndex = flags.getColumnIndex("_id");
-                          if(idIndex != -1) inv.setBankLedgerId(flags.getInt(idIndex));
-                     } catch (Exception e) {}
-                     flags.close();
-                }
-            }
-            
-            result = databaseHelper.addInvoiceObject(inv, selectedCompanyId);
-            
-            // Passing subtotal, charges, tax, grand total
-            // result = databaseHelper.addInvoice(voucherNo, date, partyName, subtotalAmount, totalChargesAmount, itemTaxTotal, totalAmount);
-            if (result != -1) {
-                for (InvoiceItem item : itemList) {
-                    databaseHelper.addInvoiceItem(result, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount());
-                }
-                // Save Charges
-                for (VoucherCharge charge : chargesList) {
-                    databaseHelper.addVoucherCharge(result, "Sales", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
-                }
-            }
-        } else if (type.equals("Purchase")) {
-            result = databaseHelper.addPurchase(voucherNo, date, partyName, totalAmount, selectedCompanyId);
-             if (result != -1) {
-                for (InvoiceItem item : itemList) {
-                    databaseHelper.addPurchaseItem(result, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount());
-                }
-                // Save Charges
-                for (VoucherCharge charge : chargesList) {
-                    databaseHelper.addVoucherCharge(result, "Purchase", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
-                }
-            }
-        } else {
-            // Receipt / Payment
-            Toast.makeText(this, "Receipt/Payment Saving not yet implemented", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        if (result != -1) {
-             Toast.makeText(this, type + " Voucher Saved Successfully!", Toast.LENGTH_LONG).show();
-             databaseHelper.addNotification("Voucher Created", type + " Voucher " + voucherNo + " created for " + partyName, "Success");
-             finish();
-        } else {
-             Toast.makeText(this, "Failed to save voucher", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
     private void loadVoucherItems(int id, String type) {
         Cursor cursor = databaseHelper.getVoucherItems(id, type);
         if (cursor != null) {
@@ -476,15 +474,277 @@ public class VoucherActivity extends BaseActivity {
         Cursor cursor = databaseHelper.getVoucherCharges(id, type);
         if (cursor != null) {
             chargesList.clear();
-            while (cursor.moveToNext()) {
-                int ledgerId = cursor.getInt(cursor.getColumnIndexOrThrow("ledger_id"));
-                String ledgerName = cursor.getString(cursor.getColumnIndexOrThrow("ledger_name"));
-                double amount = cursor.getDouble(cursor.getColumnIndexOrThrow("amount"));
-                boolean isPercentage = cursor.getInt(cursor.getColumnIndexOrThrow("is_percentage")) == 1;
-                double rate = cursor.getDouble(cursor.getColumnIndexOrThrow("rate"));
-                
-                chargesList.add(new VoucherCharge(ledgerId, ledgerName, amount, isPercentage, rate));
+                chargesList.add(new VoucherCharge(ledgerId, ledgerName, amount, isPercentage, rate, cursor.getInt(cursor.getColumnIndexOrThrow("is_debit")) == 1));
             }
+            cursor.close();
+            chargesAdapter.notifyDataSetChanged();
+            updateTotals();
+        }
+    }
+
+    private void addItem() {
+        String name = actvItemName.getText().toString();
+        String qtyStr = etQuantity.getText().toString();
+        String rateStr = etRate.getText().toString();
+        String gstStr = etGstRate.getText().toString();
+        String unit = etUnit.getText().toString();
+        String hsn = etHsn.getText().toString();
+
+        if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
+            Toast.makeText(this, "Please fill Item, Qty and Rate", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double qty = Double.parseDouble(qtyStr);
+        double rate = Double.parseDouble(rateStr);
+        double amount = qty * rate;
+        double gstRate = gstStr.isEmpty() ? 0 : Double.parseDouble(gstStr);
+        
+        double cgst = (amount * (gstRate/2)) / 100;
+        double sgst = (amount * (gstRate/2)) / 100;
+
+        itemList.add(new InvoiceItem(name, qty, rate, amount, gstRate, cgst, sgst, unit, hsn));
+        adapter.notifyItemInserted(itemList.size() - 1);
+        
+        actvItemName.setText("");
+        etQuantity.setText("");
+        etRate.setText("");
+        etGstRate.setText("");
+        etUnit.setText("");
+        etHsn.setText("");
+        
+        updateTotals();
+    }
+
+    private void showAddChargeDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Add Ledger Entry");
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_charge, null);
+        builder.setView(view);
+
+        AutoCompleteTextView actvChargeName = view.findViewById(R.id.actvChargeLedger);
+        EditText etChargeAmount = view.findViewById(R.id.etChargeAmount);
+        CheckBox cbIsPercentage = view.findViewById(R.id.cbIsPercentage);
+        Spinner spnSide = new Spinner(this);
+        
+        String type = spnVoucherType.getSelectedItem().toString();
+        List<String> ledgers = databaseHelper.getAllLedgerNames();
+        ArrayAdapter<String> ledgerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, ledgers);
+        actvChargeName.setAdapter(ledgerAdapter);
+
+        if (type.equals("Journal") || type.equals("Contra")) {
+             String[] sides = {"By (Dr)", "To (Cr)"};
+             ArrayAdapter<String> sideAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, sides);
+             spnSide.setAdapter(sideAdapter);
+             ((LinearLayout)view).addView(spnSide, 0);
+             cbIsPercentage.setVisibility(View.GONE);
+        }
+
+        builder.setPositiveButton("Add", (dialog, which) -> {
+            String name = actvChargeName.getText().toString();
+            String amtStr = etChargeAmount.getText().toString();
+            if (!name.isEmpty() && !amtStr.isEmpty()) {
+                double amount = Double.parseDouble(amtStr);
+                boolean isPercentage = cbIsPercentage.isChecked();
+                boolean isDebit = true;
+                if (type.equals("Journal") || type.equals("Contra")) {
+                    isDebit = spnSide.getSelectedItemPosition() == 0;
+                }
+                chargesList.add(new VoucherCharge(0, name, amount, isPercentage, isPercentage ? amount : 0, isDebit));
+                chargesAdapter.notifyItemInserted(chargesList.size() - 1);
+                updateTotals();
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void saveVoucher() {
+        String type = spnVoucherType.getSelectedItem().toString();
+        String voucherNo = etVoucherNo.getText().toString();
+        String date = etDate.getText().toString();
+        String partyName = actvPartyName.getText().toString();
+        String narration = etDeliveryNote.getText().toString();
+
+        if (voucherNo.isEmpty() || date.isEmpty()) {
+            Toast.makeText(this, "Number and Date are required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long voucherId = -1;
+        if (type.equals("Sales") || type.equals("Purchase")) {
+            if (partyName.isEmpty()) {
+                Toast.makeText(this, "Party Name is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            voucherId = databaseHelper.addVoucher(voucherNo, date, partyName, totalAmount, type, selectedCompanyId);
+            for (InvoiceItem item : itemList) {
+                databaseHelper.addVoucherItem(voucherId, type, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getGstRate(), item.getCgstAmount(), item.getSgstAmount(), item.getUnit(), item.getHsn());
+            }
+        } else if (type.equals("Payment") || type.equals("Receipt")) {
+             String throughLedger = actvBankLedger.getText().toString();
+             if (type.equals("Payment")) {
+                 voucherId = databaseHelper.addPayment(voucherNo, date, partyName, totalAmount, throughLedger, narration, selectedCompanyId);
+             } else {
+                 voucherId = databaseHelper.addReceipt(voucherNo, date, narration, selectedCompanyId);
+             }
+        } else if (type.equals("Journal") || type.equals("Contra")) {
+            voucherId = databaseHelper.addJournal(voucherNo, date, narration, selectedCompanyId);
+        }
+
+        if (voucherId != -1) {
+            for (VoucherCharge charge : chargesList) {
+                databaseHelper.addVoucherCharge(voucherId, type, charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.isDebit);
+            }
+            Toast.makeText(this, type + " Saved Successfully", Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            Toast.makeText(this, "Failed to save " + type, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateTotals() {
+        subtotalAmount = 0;
+        double totalGst = 0;
+        for (InvoiceItem item : itemList) {
+            subtotalAmount += item.getAmount();
+            totalGst += (item.getCgstAmount() + item.getSgstAmount());
+        }
+        totalChargesAmount = 0;
+        String type = spnVoucherType.getSelectedItem().toString();
+        if (type.equals("Journal") || type.equals("Contra")) {
+             totalAmount = 0;
+             for (VoucherCharge c : chargesList) if (c.isDebit) totalAmount += c.amount;
+        } else {
+            for (VoucherCharge charge : chargesList) {
+                if (charge.isPercentage) charge.amount = (subtotalAmount * charge.rate) / 100;
+                totalChargesAmount += charge.amount;
+            }
+            totalAmount = subtotalAmount + totalGst + totalChargesAmount;
+        }
+        tvTotalAmount.setText(String.format("Total: ₹%.2f", totalAmount));
+        if (chargesAdapter != null) chargesAdapter.notifyDataSetChanged();
+    }
+
+    private void addPaymentLine() {
+        String amountStr = etPaymentAmount.getText().toString();
+        String partyName = actvPartyName.getText().toString();
+        String type = spnVoucherType.getSelectedItem().toString();
+        if (amountStr.isEmpty() || partyName.isEmpty()) {
+            Toast.makeText(this, "Enter Party and Amount", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        double amt = Double.parseDouble(amountStr);
+        boolean isDr = type.equals("Payment");
+        chargesList.add(new VoucherCharge(0, partyName, amt, false, 0, isDr));
+        chargesAdapter.notifyDataSetChanged();
+        etPaymentAmount.setText("");
+        updateTotals();
+    }
+
+    private void viewPdf() {
+        String type = spnVoucherType.getSelectedItem().toString();
+        String voucherNo = etVoucherNo.getText().toString();
+        if (voucherNo.isEmpty()) {
+            Toast.makeText(this, "No Voucher Loaded", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (type.equals("Sales") || type.equals("Purchase")) {
+            // Simplify Sales/Purchase export for now or call generator
+            // (Previous logic for Sales was complex, but let's re-implement simply for Excel)
+             Cursor c = databaseHelper.getReadableDatabase().query(type.equals("Sales") ? "invoices" : "purchases", null, 
+                    (type.equals("Sales") ? "invoice_number" : "purchase_number") + "=? AND company_id=?", 
+                    new String[]{voucherNo, String.valueOf(selectedCompanyId)}, null, null, null);
+             
+             if (c != null && c.moveToFirst()) {
+                 int id = c.getInt(c.getColumnIndexOrThrow("_id"));
+                 String date = c.getString(c.getColumnIndexOrThrow("date"));
+                 String pName = c.getString(c.getColumnIndexOrThrow(type.equals("Sales") ? "customer_name" : "party_name"));
+                 double total = c.getDouble(c.getColumnIndexOrThrow("total_amount"));
+                 c.close();
+                 
+                 List<InvoiceItem> itList = new ArrayList<>();
+                 Cursor it = databaseHelper.getVoucherItems(id, type);
+                 if (it != null) {
+                      while(it.moveToNext()) {
+                          itList.add(new InvoiceItem(it.getString(it.getColumnIndexOrThrow("item_name")), it.getDouble(it.getColumnIndexOrThrow("quantity")), it.getDouble(it.getColumnIndexOrThrow("rate")), it.getDouble(it.getColumnIndexOrThrow("amount")), it.getDouble(it.getColumnIndexOrThrow("gst_rate")), it.getDouble(it.getColumnIndexOrThrow("cgst_amount")), it.getDouble(it.getColumnIndexOrThrow("sgst_amount")), it.getString(it.getColumnIndexOrThrow("unit")), it.getString(it.getColumnIndexOrThrow("hsn"))));
+                      }
+                      it.close();
+                 }
+                 List<InvoiceCharge> chList = new ArrayList<>();
+                 Cursor ch = databaseHelper.getVoucherCharges(id, type);
+                 if (ch != null) {
+                      while(ch.moveToNext()) {
+                          chList.add(new InvoiceCharge(ch.getString(ch.getColumnIndexOrThrow("ledger_name")), ch.getDouble(ch.getColumnIndexOrThrow("amount")), ch.getDouble(ch.getColumnIndexOrThrow("rate")), ch.getInt(ch.getColumnIndexOrThrow("is_percentage")) == 1));
+                      }
+                      ch.close();
+                 }
+                 Invoice inv = new Invoice(voucherNo, date, pName, itList, total, 0, 0, total);
+                 inv.setExtraCharges(chList);
+                 inv.setBuyersOrderNo(type.toUpperCase());
+                 new ExcelGenerator(this).generateAndOpenExcel(inv);
+             }
+        } else if (type.equals("Payment") || type.equals("Receipt")) {
+             String tbl = type.equals("Payment") ? "payments" : "receipts";
+             String vNoCol = type.equals("Payment") ? "voucher_no" : "receipt_no";
+             Cursor c = databaseHelper.getReadableDatabase().query(tbl, null, vNoCol + "=? AND company_id=?", new String[]{voucherNo, String.valueOf(selectedCompanyId)}, null, null, null);
+             if (c != null && c.moveToFirst()) {
+                 int id = c.getInt(c.getColumnIndexOrThrow("_id"));
+                 String date = c.getString(c.getColumnIndexOrThrow(type.equals("Payment") ? "date" : "receipt_date"));
+                 double total = type.equals("Payment") ? c.getDouble(c.getColumnIndexOrThrow("total_amount")) : 0;
+                 String narration = c.getString(c.getColumnIndexOrThrow(type.equals("Payment") ? "narration" : "receipt_narration"));
+                 String through = type.equals("Payment") ? c.getString(c.getColumnIndexOrThrow("through_ledger")) : "";
+                 c.close();
+                 
+                 List<InvoiceCharge> chList = new ArrayList<>();
+                 Cursor ch = databaseHelper.getVoucherCharges(id, type);
+                 if (ch != null) {
+                      while(ch.moveToNext()) {
+                          String name = ch.getString(ch.getColumnIndexOrThrow("ledger_name"));
+                          double amt = ch.getDouble(ch.getColumnIndexOrThrow("amount"));
+                          boolean isDr = ch.getInt(ch.getColumnIndexOrThrow("is_debit")) == 1;
+                          chList.add(new InvoiceCharge((isDr ? "By " : "To ") + name, amt, 0, false));
+                          if (type.equals("Receipt")) total += amt;
+                      }
+                      ch.close();
+                 }
+                 Invoice inv = new Invoice(voucherNo, date, type.equals("Payment") ? "Payment Voucher" : "Receipt Voucher", new ArrayList<>(), total, 0, 0, total);
+                 inv.setBuyersOrderNo(type.toUpperCase());
+                 inv.setDispatchThrough(through);
+                 inv.setDeliveryNote(narration);
+                 inv.setExtraCharges(chList);
+                 new ExcelGenerator(this).generateAndOpenExcel(inv);
+             }
+        } else if (type.equals("Journal") || type.equals("Contra")) {
+             Cursor c = databaseHelper.getReadableDatabase().query("journals", null, "journal_no=? AND company_id=?", new String[]{voucherNo, String.valueOf(selectedCompanyId)}, null, null, null);
+             if (c != null && c.moveToFirst()) {
+                 int id = c.getInt(c.getColumnIndexOrThrow("_id"));
+                 String date = c.getString(c.getColumnIndexOrThrow("journal_date"));
+                 String narration = c.getString(c.getColumnIndexOrThrow("journal_narration"));
+                 c.close();
+                 
+                 List<InvoiceCharge> chList = new ArrayList<>();
+                 Cursor ch = databaseHelper.getVoucherCharges(id, type);
+                 if (ch != null) {
+                      while(ch.moveToNext()) {
+                          String name = ch.getString(ch.getColumnIndexOrThrow("ledger_name"));
+                          double amt = ch.getDouble(ch.getColumnIndexOrThrow("amount"));
+                          boolean isDr = ch.getInt(ch.getColumnIndexOrThrow("is_debit")) == 1;
+                          chList.add(new InvoiceCharge((isDr ? "By " : "To ") + name, amt, 0, false));
+                      }
+                      ch.close();
+                 }
+                 Invoice inv = new Invoice(voucherNo, date, type + " Voucher", new ArrayList<>(), 0, 0, 0, 0);
+                 inv.setBuyersOrderNo(type.toUpperCase());
+                 inv.setDeliveryNote(narration);
+                 inv.setExtraCharges(chList);
+                 new ExcelGenerator(this).generateAndOpenExcel(inv);
+             }
+        } else {
+            Toast.makeText(this, "Excel generation available for all types.", Toast.LENGTH_SHORT).show();
+        }
+    }
             cursor.close();
             chargesAdapter.notifyDataSetChanged();
             updateTotals();
@@ -506,227 +766,15 @@ public class VoucherActivity extends BaseActivity {
         etRate.setEnabled(false);
         etGstRate.setEnabled(false);
         btnAddItem.setVisibility(View.GONE);
-        if (spnVoucherType.getSelectedItem().toString().equals("Sales")) {
+        
+        String type = spnVoucherType.getSelectedItem().toString();
+        if (type.equals("Sales")) {
             btnSave.setVisibility(View.GONE);
             btnViewPdf.setVisibility(View.VISIBLE);
         } else {
-             btnSave.setVisibility(View.GONE);
-             btnViewPdf.setVisibility(View.GONE); // Or create Pdf for Purchase too later
-        }
-        
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("View Voucher");
+             Toast.makeText(this, "Excel generation available for Sales, Purchase, Payment, Receipt, Journal and Contra", Toast.LENGTH_SHORT).show();
         }
     }
-
-    private void showAddChargeDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Add Charge / Tax");
-        
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(32, 32, 32, 32);
-        
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        
-        final Spinner spnLedger = new Spinner(this);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        spnLedger.setLayoutParams(params);
-        
-        Button btnNew = new Button(this);
-        btnNew.setText("New");
-        
-        row.addView(spnLedger);
-        row.addView(btnNew);
-        layout.addView(row);
-        
-        final List<String> ledgers = new ArrayList<>();
-        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ledgers);
-        spnLedger.setAdapter(adapter);
-        
-        refreshChargeLedgers(ledgers, adapter);
-        
-        btnNew.setOnClickListener(v -> showCreateTaxDialog(() -> refreshChargeLedgers(ledgers, adapter)));
-        
-        final EditText etValue = new EditText(this);
-        etValue.setHint("Amount or Rate (%)");
-        etValue.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        layout.addView(etValue);
-        
-        final CheckBox cbIsPercentage = new CheckBox(this);
-        cbIsPercentage.setText("Is Percentage (%)");
-        layout.addView(cbIsPercentage);
-        
-        spnLedger.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedName = ledgers.get(position);
-                Cursor c = databaseHelper.getLedgerDetails(selectedName);
-                if (c != null && c.moveToFirst()) {
-                    int rateIdx = c.getColumnIndex("tax_rate");
-                    int pctIdx = c.getColumnIndex("is_percentage");
-                    
-                    if (rateIdx != -1) {
-                        double rate = c.getDouble(rateIdx);
-                        if (rate > 0) etValue.setText(String.valueOf(rate));
-                        else etValue.setText("");
-                    }
-                    if (pctIdx != -1) {
-                         cbIsPercentage.setChecked(c.getInt(pctIdx) == 1);
-                    }
-                    c.close();
-                }
-            }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        });
-        
-        builder.setView(layout);
-        
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            String ledgerName = (String) spnLedger.getSelectedItem();
-            String valStr = etValue.getText().toString();
-            if (ledgerName != null && !valStr.isEmpty()) {
-                double val = Double.parseDouble(valStr);
-                boolean isPercent = cbIsPercentage.isChecked();
-                
-                // Calculate amount initially
-                double amount = isPercent ? (subtotalAmount * val / 100) : val;
-                
-                // Ledger ID
-                int ledgerId = 0; 
-                Cursor c = databaseHelper.getLedgerDetails(ledgerName);
-                if(c!=null && c.moveToFirst()) {
-                    ledgerId = c.getInt(c.getColumnIndexOrThrow("_id"));
-                    c.close();
-                }
-                
-                chargesList.add(new VoucherCharge(ledgerId, ledgerName, amount, isPercent, val));
-                chargesAdapter.notifyDataSetChanged();
-                updateTotals();
-            }
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
-    }
-
-    private void refreshChargeLedgers(List<String> list, ArrayAdapter<String> adapter) {
-        list.clear();
-        list.addAll(databaseHelper.getLedgersByGroupList("Duties & Taxes"));
-        list.addAll(databaseHelper.getLedgersByGroupList("Indirect Expenses"));
-        list.addAll(databaseHelper.getLedgersByGroupList("Direct Expenses"));
-        list.addAll(databaseHelper.getLedgersByGroupList("Indirect Incomes"));
-        adapter.notifyDataSetChanged();
-    }
-
-    private void showCreateTaxDialog(Runnable onSuccess) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Create New Tax Ledger");
-        
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(32, 32, 32, 32);
-        
-        final EditText etName = new EditText(this);
-        etName.setHint("Ledger Name (e.g., GST 18%)");
-        layout.addView(etName);
-        
-        final EditText etRate = new EditText(this);
-        etRate.setHint("Tax Rate (%)");
-        etRate.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        layout.addView(etRate);
-        
-        final CheckBox cbIsPercentage = new CheckBox(this);
-        cbIsPercentage.setText("Is Percentage");
-        cbIsPercentage.setChecked(true);
-        layout.addView(cbIsPercentage);
-        
-        builder.setView(layout);
-        
-        builder.setPositiveButton("Save", (dialog, which) -> {
-            String name = etName.getText().toString();
-            String rateStr = etRate.getText().toString();
-            
-            if (!name.isEmpty()) {
-                double rate = 0;
-                if (!rateStr.isEmpty()) rate = Double.parseDouble(rateStr);
-                
-                // Defaults: Group="Duties & Taxes", type="Credit"
-                databaseHelper.addLedger(name, "Duties & Taxes", "", "", "", "", 0, "Credit", rate, cbIsPercentage.isChecked());
-                
-                Toast.makeText(this, "Tax Ledger Created", Toast.LENGTH_SHORT).show();
-                if (onSuccess != null) onSuccess.run();
-            } else {
-                Toast.makeText(this, "Name is required", Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
-    }
-
-    private void addItem() {
-        String name = actvItemName.getText().toString();
-        String qtyStr = etQuantity.getText().toString();
-        String rateStr = etRate.getText().toString();
-
-        if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
-            Toast.makeText(this, "Please fill item details", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        double qty = Double.parseDouble(qtyStr);
-        double rate = Double.parseDouble(rateStr);
-        
-        String gstStr = etGstRate.getText().toString();
-        double gstRate = gstStr.isEmpty() ? 0 : Double.parseDouble(gstStr);
-        
-        // Calculate Amounts
-        double amount = qty * rate; // Taxable Vaue
-        
-        // Tax Calculation (Item level)
-        double taxAmount = amount * (gstRate / 100);
-        double cgst = taxAmount / 2;
-        double sgst = taxAmount / 2;
-        
-        String unit = etUnit.getText().toString();
-        String hsn = etHsn.getText().toString();
-
-        itemList.add(new InvoiceItem(name, qty, rate, amount, gstRate, cgst, sgst, unit, hsn));
-        adapter.notifyDataSetChanged();
-        
-        updateTotals();
-        
-        actvItemName.setText("");
-        etQuantity.setText("");
-        etRate.setText("");
-        etUnit.setText("");
-        etHsn.setText("");
-        etGstRate.setText("");
-        actvItemName.requestFocus();
-    }
-
-    private void updateTotals() {
-        subtotalAmount = 0;
-        double itemTaxTotal = 0;
-        
-        for (InvoiceItem item : itemList) {
-            subtotalAmount += item.getAmount(); 
-            itemTaxTotal += (item.getCgstAmount() + item.getSgstAmount());
-        }
-        
-        // Recalculate Charges
-        totalChargesAmount = 0;
-        for (VoucherCharge charge : chargesList) {
-            if (charge.isPercentage) {
-                charge.amount = subtotalAmount * (charge.rate / 100);
-            }
-            totalChargesAmount += charge.amount;
-        }
-        if (chargesAdapter != null) chargesAdapter.notifyDataSetChanged();
-        
-        totalAmount = subtotalAmount + itemTaxTotal + totalChargesAmount;
-        tvTotalAmount.setText(String.format("Total: ₹%.2f", totalAmount));
     }
 
     private Invoice createInvoiceObject(String voucherNo, String date, String partyName, double itemTaxTotal) {
@@ -738,6 +786,7 @@ public class VoucherActivity extends BaseActivity {
                 etRefNo.getText().toString(),
                 etOtherRef.getText().toString(),
                 etBuyerOrderNo.getText().toString(),
+                "", // buyersOrderDate placeholder
                 etDispatchDocNo.getText().toString(),
                 etDeliveryNoteDate.getText().toString(),
                 etDispatchThrough.getText().toString(),
@@ -754,22 +803,6 @@ public class VoucherActivity extends BaseActivity {
          return inv;
     }
 
-    private void viewPdf() {
-         String voucherNo = etVoucherNo.getText().toString();
-         String date = etDate.getText().toString();
-         String partyName = actvPartyName.getText().toString();
-         
-         double itemTaxTotal = 0;
-         for (InvoiceItem item : itemList) {
-            itemTaxTotal += (item.getCgstAmount() + item.getSgstAmount());
-         }
-         
-         Invoice inv = createInvoiceObject(voucherNo, date, partyName, itemTaxTotal);
-         
-         PdfGenerator pdfGenerator = new PdfGenerator(this);
-         pdfGenerator.generateAndOpenPdf(inv);
-    }
-
     private void removeCharge(int position) {
         chargesList.remove(position);
         chargesAdapter.notifyItemRemoved(position);
@@ -778,19 +811,9 @@ public class VoucherActivity extends BaseActivity {
 
     // Inner Classes
     
-    private static class VoucherCharge {
-        int ledgerId;
-        String ledgerName;
-        double amount;
-        boolean isPercentage;
-        double rate;
-        
-        VoucherCharge(int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate) {
-            this.ledgerId = ledgerId; this.ledgerName = ledgerName; this.amount = amount; this.isPercentage = isPercentage; this.rate = rate;
-        }
-    }
+
     
-    private static class ChargesAdapter extends RecyclerView.Adapter<ChargesAdapter.ChargeViewHolder> {
+    private class ChargesAdapter extends RecyclerView.Adapter<ChargesAdapter.ChargeViewHolder> {
         private List<VoucherCharge> list;
         private OnRemoveListener listener;
         
@@ -814,13 +837,18 @@ public class VoucherActivity extends BaseActivity {
         @Override
         public void onBindViewHolder(@androidx.annotation.NonNull ChargeViewHolder holder, int position) {
             VoucherCharge charge = list.get(position);
-            holder.tvName.setText(charge.ledgerName);
+            String prefix = "";
+            String type = spnVoucherType.getSelectedItem().toString();
+            if (type.equals("Journal") || type.equals("Contra")) {
+                prefix = charge.isDebit ? "By " : "To ";
+            }
+            holder.tvName.setText(prefix + charge.ledgerName);
             if (charge.isPercentage) {
                 holder.tvValue.setText("@ " + charge.rate + "%");
             } else {
                 holder.tvValue.setText("(Fixed)");
             }
-            holder.tvAmount.setText(String.format("₹%.2f", charge.amount));
+            holder.tvAmount.setText(String.format("â‚¹%.2f", charge.amount));
             holder.btnRemove.setOnClickListener(v -> listener.onRemove(position));
         }
 
@@ -843,3 +871,4 @@ public class VoucherActivity extends BaseActivity {
         }
     }
 }
+

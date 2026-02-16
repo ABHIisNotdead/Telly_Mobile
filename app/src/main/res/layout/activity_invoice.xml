@@ -19,7 +19,8 @@
             android:background="?attr/colorPrimary"
             app:title="Generate Invoice"
             app:titleTextColor="@color/on_primary"
-            app:navigationIcon="@drawable/ic_launcher_foreground" 
+            app:navigationIcon="@drawable/ic_arrow_back" 
+            app:navigationIconTint="@color/white"
             style="@style/Widget.Material3.Toolbar.Surface" />
             <!-- Note: Using launcher foreground as placeholder icon if back arrow not set programmatically -->
 
@@ -161,7 +162,10 @@
                             android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Buyer's Order No" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginEnd="4dp">
                             <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBuyerOrderNo" android:layout_width="match_parent" android:layout_height="wrap_content"/>
                         </com.google.android.material.textfield.TextInputLayout>
-                         <!-- Date field could be added but skipped for now to save space, or user can put in order no field -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Dated" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBuyersOrderDate" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                        </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
                     <!-- Row 4 -->
@@ -242,6 +246,17 @@
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Email" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginEnd="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBuyerEmail" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textEmailAddress"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Mobile" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etBuyerMobile" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="phone"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginVertical="12dp"/>
                     
                     <!-- Consignee Detail (Ship To) -->
@@ -265,6 +280,17 @@
                         <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="State" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
                             <com.google.android.material.textfield.TextInputEditText android:id="@+id/etConsigneeState" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Email" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginEnd="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etConsigneeEmail" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textEmailAddress"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="Mobile" style="@style/Widget.Material3.TextInputLayout.OutlinedBox" android:layout_marginStart="4dp">
+                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etConsigneeMobile" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="phone"/>
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
@@ -394,12 +420,58 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Line Items List -->
+             <!-- Line Items List -->
              <TextView
                 android:text="Item List"
                 style="@style/SectionHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <!-- Table Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:background="?attr/colorSurfaceVariant">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="Item"
+                    android:textStyle="bold"
+                    android:textSize="12sp"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Qty"
+                    android:gravity="end"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:paddingEnd="4dp"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Rate"
+                    android:gravity="end"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:paddingEnd="4dp"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="Amount"
+                    android:gravity="end"
+                    android:textStyle="bold"
+                    android:textSize="12sp"/>
+                <Space
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvInvoiceItems"

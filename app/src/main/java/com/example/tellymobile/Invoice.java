@@ -17,6 +17,7 @@ public class Invoice {
     private String referenceNo;
     private String otherReferences;
     private String buyersOrderNo;
+    private String buyersOrderDate;
     private String dispatchDocNo;
     private String deliveryNoteDate;
     private String dispatchThrough;
@@ -30,10 +31,14 @@ public class Invoice {
     private String consigneeAddress;
     private String consigneeGst;
     private String consigneeState;
+    private String consigneeEmail;
+    private String consigneeMobile;
     
     private String buyerAddress;
     private String buyerGst;
     private String buyerState; // Used to determine IGST vs CGST/SGST
+    private String buyerEmail;
+    private String buyerMobile;
 
     public Invoice(String invoiceNumber, String date, String customerName, List<InvoiceItem> items, double totalAmount, double deliveryCharges, double totalTaxAmount, double grandTotal) {
         this.invoiceNumber = invoiceNumber;
@@ -47,19 +52,21 @@ public class Invoice {
     }
 
     // Setters for new fields (Builder style or standard)
-    public void setDispatchDetails(String deliveryNote, String modeOfPayment, String referenceNo, String otherReferences, String buyersOrderNo, String dispatchDocNo, String deliveryNoteDate, String dispatchThrough, String destination, String termsOfDelivery, String billOfLading, String motorVehicleNo) {
+    public void setDispatchDetails(String deliveryNote, String modeOfPayment, String referenceNo, String otherReferences, String buyersOrderNo, String buyersOrderDate, String dispatchDocNo, String deliveryNoteDate, String dispatchThrough, String destination, String termsOfDelivery, String billOfLading, String motorVehicleNo) {
         this.deliveryNote = deliveryNote; this.modeOfPayment = modeOfPayment; this.referenceNo = referenceNo; this.otherReferences = otherReferences;
-        this.buyersOrderNo = buyersOrderNo; this.dispatchDocNo = dispatchDocNo; this.deliveryNoteDate = deliveryNoteDate;
+        this.buyersOrderNo = buyersOrderNo; this.buyersOrderDate = buyersOrderDate; this.dispatchDocNo = dispatchDocNo; this.deliveryNoteDate = deliveryNoteDate;
         this.dispatchThrough = dispatchThrough; this.destination = destination; this.termsOfDelivery = termsOfDelivery;
         this.billOfLading = billOfLading; this.motorVehicleNo = motorVehicleNo;
     }
 
-    public void setConsigneeDetails(String name, String address, String gst, String state) {
+    public void setConsigneeDetails(String name, String address, String gst, String state, String email, String mobile) {
         this.consigneeName = name; this.consigneeAddress = address; this.consigneeGst = gst; this.consigneeState = state;
+        this.consigneeEmail = email; this.consigneeMobile = mobile;
     }
 
-    public void setBuyerDetails(String address, String gst, String state) {
+    public void setBuyerDetails(String address, String gst, String state, String email, String mobile) {
         this.buyerAddress = address; this.buyerGst = gst; this.buyerState = state;
+        this.buyerEmail = email; this.buyerMobile = mobile;
     }
 
     public String getInvoiceNumber() { return invoiceNumber; }
@@ -77,6 +84,7 @@ public class Invoice {
     public String getReferenceNo() { return referenceNo; }
     public String getOtherReferences() { return otherReferences; }
     public String getBuyersOrderNo() { return buyersOrderNo; }
+    public String getBuyersOrderDate() { return buyersOrderDate; }
     public String getDispatchDocNo() { return dispatchDocNo; }
     public String getDeliveryNoteDate() { return deliveryNoteDate; }
     public String getDispatchThrough() { return dispatchThrough; }
@@ -89,12 +97,20 @@ public class Invoice {
     public String getConsigneeAddress() { return consigneeAddress; }
     public String getConsigneeGst() { return consigneeGst; }
     public String getConsigneeState() { return consigneeState; }
+    public String getConsigneeEmail() { return consigneeEmail; }
+    public String getConsigneeMobile() { return consigneeMobile; }
     
     public String getBuyerAddress() { return buyerAddress; }
     public String getBuyerGst() { return buyerGst; }
     public String getBuyerState() { return buyerState; }
+    public String getBuyerEmail() { return buyerEmail; }
+    public String getBuyerMobile() { return buyerMobile; }
     
     private int bankLedgerId = -1;
     public void setBankLedgerId(int id) { this.bankLedgerId = id; }
     public int getBankLedgerId() { return bankLedgerId; }
+
+    private List<InvoiceCharge> extraCharges;
+    public void setExtraCharges(List<InvoiceCharge> extraCharges) { this.extraCharges = extraCharges; }
+    public List<InvoiceCharge> getExtraCharges() { return extraCharges; }
 }
