@@ -14,7 +14,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private Context context;
     private static final String DATABASE_NAME = "TellyMobile.db";
-    private static final int DATABASE_VERSION = 25; // Incremented for Journal/Receipt Support
+    private static final int DATABASE_VERSION = 35; // Added Payment Mode for Receipt
+
 
     // ...
 
@@ -47,6 +48,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_COMPANY_LOGO = "company_logo";     // New Logo URI
     public static final String COLUMN_COMPANY_GST = "company_gst";
     public static final String COLUMN_COMPANY_TAGLINE = "company_tagline";
+    public static final String COLUMN_COMPANY_CST = "company_cst";
+    public static final String COLUMN_COMPANY_TIN = "company_tin";
+    public static final String COLUMN_COMPANY_VAT_TIN = "company_vat_tin";
 
     // ...
 
@@ -162,7 +166,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_PURCHASE_ID = "_id";
     public static final String COLUMN_PURCHASE_INV_NO = "purchase_inv_no";
     public static final String COLUMN_PURCHASE_DATE = "purchase_date";
+    public static final String COLUMN_SUPPLIER_INV_NO = "supplier_inv_no"; // New
+    public static final String COLUMN_SUPPLIER_INV_DATE = "supplier_inv_date";
     public static final String COLUMN_SUPPLIER_NAME = "supplier_name";
+    public static final String COLUMN_SUPPLIER_CST = "supplier_cst";
+    public static final String COLUMN_SUPPLIER_TIN = "supplier_tin";
+    public static final String COLUMN_BUYER_VAT_TIN = "buyer_vat_tin";
     public static final String COLUMN_PURCHASE_TOTAL = "purchase_total";
 
     // Purchase Items Table
@@ -235,6 +244,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_CHARGE_IS_PERCENTAGE = "is_percentage"; // 1 for true, 0 for false
     public static final String COLUMN_CHARGE_RATE = "rate"; // Percentage value
     public static final String COLUMN_CHARGE_IS_DEBIT = "is_debit"; // 1 for Dr, 0 for Cr
+    public static final String COLUMN_CHARGE_PAYMENT_MODE = "payment_mode"; // New
+
     
     // Journal Table
     public static final String TABLE_JOURNALS = "journals";
@@ -242,6 +253,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_JOURNAL_NO = "journal_no";
     public static final String COLUMN_JOURNAL_DATE = "date";
     public static final String COLUMN_JOURNAL_NARRATION = "narration";
+    public static final String COLUMN_JOURNAL_TYPE = "journal_type";
     
     // Receipt Table
     public static final String TABLE_RECEIPTS = "receipts";
@@ -249,6 +261,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_RECEIPT_NO = "receipt_no";
     public static final String COLUMN_RECEIPT_DATE = "date";
     public static final String COLUMN_RECEIPT_NARRATION = "narration";
+    public static final String COLUMN_RECEIPT_THROUGH = "through_ledger"; // New
+    public static final String COLUMN_RECEIPT_TOTAL = "total_amount"; // New
+    public static final String COLUMN_RECEIPT_PAYMENT_MODE = "payment_mode"; // New for v35
     
     // Notifications Table
     public static final String TABLE_NOTIFICATIONS = "notifications";
@@ -283,7 +298,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_COMPANY_STATE + " TEXT, " +   // New
                 COLUMN_COMPANY_LOGO + " TEXT, " +    // New
                 COLUMN_COMPANY_GST + " TEXT, " +
-                COLUMN_COMPANY_TAGLINE + " TEXT);";
+                COLUMN_COMPANY_TAGLINE + " TEXT, " +
+                COLUMN_COMPANY_CST + " TEXT, " +
+                COLUMN_COMPANY_TIN + " TEXT, " +
+                COLUMN_COMPANY_VAT_TIN + " TEXT);";
         db.execSQL(queryCompanies);
 
         String queryGroups = "CREATE TABLE " + TABLE_GROUPS + " (" +
@@ -412,7 +430,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_CHARGE_LEDGER_NAME + " TEXT, " +
                 COLUMN_CHARGE_AMOUNT + " REAL, " +
                 COLUMN_CHARGE_IS_PERCENTAGE + " INTEGER, " +
-                COLUMN_CHARGE_RATE + " REAL);";
+                COLUMN_CHARGE_RATE + " REAL, " +
+                COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0, " +
+                COLUMN_CHARGE_PAYMENT_MODE + " TEXT);";
+
         db.execSQL(queryVoucherCharges);
 
         String queryNotifications = "CREATE TABLE " + TABLE_NOTIFICATIONS + " (" +
@@ -439,6 +460,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_JOURNAL_NO + " TEXT, " +
                 COLUMN_JOURNAL_DATE + " TEXT, " +
                 COLUMN_JOURNAL_NARRATION + " TEXT, " +
+                COLUMN_JOURNAL_TYPE + " TEXT, " +
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryJournals);
 
@@ -447,6 +469,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_RECEIPT_NO + " TEXT, " +
                 COLUMN_RECEIPT_DATE + " TEXT, " +
                 COLUMN_RECEIPT_NARRATION + " TEXT, " +
+                COLUMN_RECEIPT_THROUGH + " TEXT, " + // New
+                COLUMN_RECEIPT_TOTAL + " REAL, " +   // New
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryReceipts);
         
@@ -694,7 +718,94 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 e.printStackTrace();
             }
         }
+        if (oldVersion < 28 && newVersion >= 28) {
+            try { db.execSQL("ALTER TABLE " + TABLE_JOURNALS + " ADD COLUMN " + COLUMN_JOURNAL_TYPE + " TEXT"); } catch (Exception e) {}
+            try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0"); } catch (Exception e) {}
+            try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
+        }
+        if (oldVersion < 29 && newVersion >= 29) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_CST + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_TIN + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_COMPANIES + " ADD COLUMN " + COLUMN_COMPANY_VAT_TIN + " TEXT");
+                
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_INV_DATE + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_CST + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_TIN + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_BUYER_VAT_TIN + " TEXT");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (oldVersion < 30 && newVersion >= 30) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_INV_NO + " TEXT");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (oldVersion < 31 && newVersion >= 31) {
+            try {
+                // Ensure columns exist (Duplicate check for safety)
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_INV_DATE + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_CST + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_SUPPLIER_TIN + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_PURCHASES + " ADD COLUMN " + COLUMN_BUYER_VAT_TIN + " TEXT");
+            } catch (Exception e) {
+                // Ignore if they already exist
+            }
+        }
+        if (oldVersion < 32 && newVersion >= 32) {
+            try {
+                // Add new columns for Receipts
+                db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_THROUGH + " TEXT");
+                db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_TOTAL + " REAL");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (oldVersion < 34 && newVersion >= 34) {
+             try {
+                 // Comprehensive Fix: Ensure Table Exists
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_RECEIPTS + " (" +
+                         COLUMN_RECEIPT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                         COLUMN_RECEIPT_NO + " TEXT, " +
+                         COLUMN_RECEIPT_DATE + " TEXT, " +
+                         COLUMN_RECEIPT_NARRATION + " TEXT, " +
+                         COLUMN_RECEIPT_THROUGH + " TEXT, " + 
+                         COLUMN_RECEIPT_TOTAL + " REAL, " +   
+                         COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);");
+                         
+                 // Ensure Columns Exist (Safe Add)
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_DATE + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_NO + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_NARRATION + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_THROUGH + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_TOTAL + " REAL"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_COMPANY_ID + " INTEGER DEFAULT 0"); } catch (Exception e) {}
+                 
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+        }
+        if (oldVersion < 35 && newVersion >= 35) {
+            try {
+                // Add payment mode to Receipts
+                db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_PAYMENT_MODE + " TEXT");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        // Robustly ensure payment_mode exists for v35+ regardless of upgrade path
+        if (newVersion >= 35) {
+             try {
+                db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_PAYMENT_MODE + " TEXT");
+            } catch (Exception e) {
+                // Column likely already exists, ignore
+            }
+        }
     }
+
 
     public void updateStock(String itemName, double qtyChange) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -762,18 +873,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, new String[]{group});
     }
 
-    public List<String> getLedgersByGroupList(String groupName) {
+
+
+    public List<String> getContraLedgerNames() {
         List<String> names = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_NAME, new String[]{COLUMN_NAME}, COLUMN_GROUP + "=?", new String[]{groupName}, null, null, null);
+        String query = "SELECT " + COLUMN_NAME + " FROM " + TABLE_NAME + 
+                       " WHERE " + COLUMN_GROUP + " IN ('Bank Accounts', 'Cash-in-hand')";
+        Cursor cursor = db.rawQuery(query, null);
         if (cursor != null) {
             while (cursor.moveToNext()) {
                 names.add(cursor.getString(0));
             }
             cursor.close();
         }
+        if (!names.contains("Cash")) names.add("Cash");
         return names;
     }
+
 
     // --- Master Methods (Groups, Ledgers, Items) ---
     public void addLedgerGroup(String name, String parent) {
@@ -1017,6 +1134,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.insert(TABLE_INVOICES, null, cv);
     }
 
+    // --- Voucher (Generic/Sales/Purchase) Methods ---
+    public long addVoucher(String voucherNo, String date, String partyName, double totalAmount, double totalTax, double otherCharges, String type, int companyId) {
+        if (type.equals("Sales")) {
+            // Map to Invoice
+            Invoice inv = new Invoice(voucherNo, date, partyName, null, totalAmount, otherCharges, totalTax, totalAmount + totalTax + otherCharges);
+            return addInvoiceObject(inv, companyId);
+        } else if (type.equals("Purchase")) {
+            return addPurchase(voucherNo, date, "", "", partyName, "", "", "", totalAmount + totalTax + otherCharges, companyId);
+        }
+        return -1;
+    }
+    
+    public long addVoucherItem(long voucherId, String type, String itemName, double quantity, double rate, double amount, double gstRate, double cgst, double sgst, String unit, String hsn) {
+        if (type.equals("Sales")) {
+            return addInvoiceItem(voucherId, itemName, quantity, rate, amount, gstRate, cgst, sgst, unit, hsn);
+        } else if (type.equals("Purchase")) {
+             addPurchaseItem(voucherId, itemName, quantity, rate, amount, unit, hsn);
+             return 1; // Success
+        }
+        return -1;
+    }
+
+    public long addPayment(String voucherNo, String date, String partyName, double totalAmount, String throughLedger, String narration, int companyId) {
+        // Warning: The original addPayment didn't have partyName, it seems it was stored in VoucherCharges?
+        // But for this mismatch, we will ignore partyName or append to narration if needed, 
+        // OR better, we use the existing addPayment which expects (No, Date, Through, Total, Narration, Company)
+        // The error says: required: String,String,String,double,String,int; found: String,String,String,double,String,String,int
+        // So we need an overload or fix the call. 
+        // Let's overload to match the call in VoucherActivity
+        return addPayment(voucherNo, date, throughLedger, totalAmount, narration + " (Party: " + partyName + ")", companyId);
+    } 
+
     // Updated to include Unit and HSN
     public long addInvoiceItem(long invoiceId, String itemName, double quantity, double rate, double amount, double gstRate, double cgst, double sgst, String unit, String hsn) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -1054,20 +1203,34 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     
     // --- Purchase Methods ---
-    public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount, int companyId) {
+    public long addPurchase(String invoiceNo, String date, String supplierInvDate, String supplierInvNo, String supplierName, String supplierCst, String supplierTin, String buyerVatTin, double totalAmount, int companyId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_PURCHASE_INV_NO, invoiceNo);
         cv.put(COLUMN_PURCHASE_DATE, date);
+        cv.put(COLUMN_SUPPLIER_INV_DATE, supplierInvDate);
+        cv.put(COLUMN_SUPPLIER_INV_NO, supplierInvNo); // New
         cv.put(COLUMN_SUPPLIER_NAME, supplierName);
+        cv.put(COLUMN_SUPPLIER_CST, supplierCst);
+        cv.put(COLUMN_SUPPLIER_TIN, supplierTin);
+        cv.put(COLUMN_BUYER_VAT_TIN, buyerVatTin);
         cv.put(COLUMN_PURCHASE_TOTAL, totalAmount);
         cv.put(COLUMN_COMPANY_ID, companyId);
         return db.insert(TABLE_PURCHASES, null, cv);
     }
     
     // Legacy overload
+    public long addPurchase(String invoiceNo, String date, String supplierInvDate, String supplierName, String supplierCst, String supplierTin, String buyerVatTin, double totalAmount) {
+         return addPurchase(invoiceNo, date, supplierInvDate, "", supplierName, supplierCst, supplierTin, buyerVatTin, totalAmount, 0);
+    }
+    
+    // Older legacy overload
+    public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount, int companyId) {
+         return addPurchase(invoiceNo, date, "", "", supplierName, "", "", "", totalAmount, companyId);
+    }
+
     public long addPurchase(String invoiceNo, String date, String supplierName, double totalAmount) {
-         return addPurchase(invoiceNo, date, supplierName, totalAmount, 0);
+         return addPurchase(invoiceNo, date, "", "", supplierName, "", "", "", totalAmount, 0);
     }
 
     public void addPurchaseItem(long purchaseId, String itemName, double qty, double rate, double amount, String unit, String hsn) {
@@ -1082,8 +1245,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_PUR_HSN, hsn); // Added
         db.insert(TABLE_PURCHASE_ITEMS, null, cv);
         
-        // Increase Stock for Purchases
+    // Increase Stock for Purchases
         updateStock(itemName, qty);
+    }
+    
+    public void updatePurchase(long id, String invoiceNo, String date, String supplierInvDate, String supplierInvNo, String supplierName, String supplierCst, String supplierTin, String buyerVatTin, double totalAmount) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_PURCHASE_INV_NO, invoiceNo);
+        cv.put(COLUMN_PURCHASE_DATE, date);
+        cv.put(COLUMN_SUPPLIER_INV_DATE, supplierInvDate);
+        cv.put(COLUMN_SUPPLIER_INV_NO, supplierInvNo); // New
+        cv.put(COLUMN_SUPPLIER_NAME, supplierName);
+        cv.put(COLUMN_SUPPLIER_CST, supplierCst);
+        cv.put(COLUMN_SUPPLIER_TIN, supplierTin);
+        cv.put(COLUMN_BUYER_VAT_TIN, buyerVatTin);
+        cv.put(COLUMN_PURCHASE_TOTAL, totalAmount);
+        db.update(TABLE_PURCHASES, cv, COLUMN_PURCHASE_ID + "=?", new String[]{String.valueOf(id)});
+    }
+
+    public void deletePurchaseItems(long purchaseId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        // First revert stock
+        Cursor cursor = db.query(TABLE_PURCHASE_ITEMS, new String[]{COLUMN_PUR_ITEM_NAME, COLUMN_PUR_QTY}, COLUMN_PUR_ID_FK + "=?", new String[]{String.valueOf(purchaseId)}, null, null, null);
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                String item = cursor.getString(0);
+                double qty = cursor.getDouble(1);
+                updateStock(item, -qty); // Remove stock as we are deleting/updating the purchase
+            }
+            cursor.close();
+        }
+        db.delete(TABLE_PURCHASE_ITEMS, COLUMN_PUR_ID_FK + "=?", new String[]{String.valueOf(purchaseId)});
     }
     
     // Legacy overload
@@ -1105,6 +1298,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             cursor.close();
         }
+        return names;
+    }
+
+    public List<String> getLedgersByGroupList(String groupName) {
+        List<String> names = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        
+        // 1. Get Ledgers directly in this group (Case Insensitive)
+        Cursor cursor = db.query(TABLE_NAME, new String[]{COLUMN_NAME}, COLUMN_GROUP + "=? COLLATE NOCASE", new String[]{groupName}, null, null, null);
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                names.add(cursor.getString(0));
+            }
+            cursor.close();
+        }
+        
+        // 2. Get Sub-groups (Recursive, Case Insensitive)
+        Cursor groupCursor = db.query(TABLE_GROUPS, new String[]{COLUMN_GROUP_NAME}, COLUMN_GROUP_PARENT + "=? COLLATE NOCASE", new String[]{groupName}, null, null, null);
+        if (groupCursor != null) {
+            while (groupCursor.moveToNext()) {
+                String subGroup = groupCursor.getString(0);
+                names.addAll(getLedgersByGroupList(subGroup));
+            }
+            groupCursor.close();
+        }
+        
         return names;
     }
 
@@ -1167,23 +1386,157 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor c3 = db.rawQuery(queryPayments, new String[]{String.valueOf(companyId)});
          if (c3 != null) {
             while (c3.moveToNext()) {
+                int vId = c3.getInt(0);
+                String party = getVoucherPartyName(vId, "Payment", c3.getString(3)); // c3.getString(3) is through_ledger
                 list.add(new VoucherSummary(
-                    c3.getInt(0), 
+                    vId, 
                     "Payment", 
                     c3.getString(1), 
                     c3.getString(2), 
-                    c3.getString(3), 
+                    party, 
                     c3.getDouble(4)
                 ));
             }
             c3.close();
         }
+
+        // Fetch Receipts
+        String queryReceipts = "SELECT " + COLUMN_RECEIPT_ID + ", " + COLUMN_RECEIPT_NO + ", " + COLUMN_RECEIPT_DATE + ", " + COLUMN_RECEIPT_NARRATION + 
+                               " FROM " + TABLE_RECEIPTS + " WHERE " + COLUMN_COMPANY_ID + "=?";
+        Cursor c4 = db.rawQuery(queryReceipts, new String[]{String.valueOf(companyId)});
+        if (c4 != null) {
+            while (c4.moveToNext()) {
+                int vId = c4.getInt(0);
+                double total = getVoucherTotal(vId, "Receipt");
+                String party = getVoucherPartyName(vId, "Receipt", c4.getString(3));
+                list.add(new VoucherSummary(
+                    vId, 
+                    "Receipt", 
+                    c4.getString(1), 
+                    c4.getString(2), 
+                    party, 
+                    total
+                ));
+            }
+            c4.close();
+        }
+
+        // Fetch Journals
+        String queryJournals = "SELECT " + COLUMN_JOURNAL_ID + ", " + COLUMN_JOURNAL_NO + ", " + COLUMN_JOURNAL_DATE + ", " + COLUMN_JOURNAL_NARRATION + ", " + COLUMN_JOURNAL_TYPE + 
+                               " FROM " + TABLE_JOURNALS + " WHERE " + COLUMN_COMPANY_ID + "=?";
+        Cursor c5 = db.rawQuery(queryJournals, new String[]{String.valueOf(companyId)});
+        if (c5 != null) {
+            int idIdx = c5.getColumnIndex(COLUMN_JOURNAL_ID);
+            int noIdx = c5.getColumnIndex(COLUMN_JOURNAL_NO);
+            int dateIdx = c5.getColumnIndex(COLUMN_JOURNAL_DATE);
+            int narrIdx = c5.getColumnIndex(COLUMN_JOURNAL_NARRATION);
+            int typeIdx = c5.getColumnIndex(COLUMN_JOURNAL_TYPE);
+
+            while (c5.moveToNext()) {
+                int vId = c5.getInt(c5.getColumnIndexOrThrow(COLUMN_JOURNAL_ID));
+                String vType = (typeIdx != -1) ? c5.getString(typeIdx) : "Journal";
+                if (vType == null || vType.isEmpty()) vType = "Journal";
+                
+                double total = getVoucherTotal(vId, vType);
+                String party = getVoucherPartyName(vId, vType, (narrIdx != -1) ? c5.getString(narrIdx) : "");
+                
+                list.add(new VoucherSummary(
+                    vId, 
+                    vType, 
+                    (noIdx != -1) ? c5.getString(noIdx) : "", 
+                    (dateIdx != -1) ? c5.getString(dateIdx) : "", 
+                    party, 
+                    total 
+                ));
+            }
+            c5.close();
+        }
         
-        // Sorting could be done here or in SQL UNION, but List sort is easier for now
-        // list.sort(...) based on date
         return list;
     }
+
+    private String getVoucherPartyName(long voucherId, String type, String defaultValue) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        
+        if (type.equalsIgnoreCase("Journal") || type.equalsIgnoreCase("Contra")) {
+            String drLedger = "";
+            String crLedger = "";
+            
+            Cursor cDr = db.rawQuery("SELECT " + COLUMN_CHARGE_LEDGER_NAME + " FROM " + TABLE_VOUCHER_CHARGES + 
+                                     " WHERE " + COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=? AND " + COLUMN_CHARGE_IS_DEBIT + "=1 LIMIT 1", 
+                                     new String[]{String.valueOf(voucherId), type.trim()});
+            if (cDr != null) {
+                if (cDr.moveToFirst()) drLedger = cDr.getString(0);
+                cDr.close();
+            }
+            
+            Cursor cCr = db.rawQuery("SELECT " + COLUMN_CHARGE_LEDGER_NAME + " FROM " + TABLE_VOUCHER_CHARGES + 
+                                     " WHERE " + COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=? AND " + COLUMN_CHARGE_IS_DEBIT + "=0 LIMIT 1", 
+                                     new String[]{String.valueOf(voucherId), type.trim()});
+            if (cCr != null) {
+                if (cCr.moveToFirst()) crLedger = cCr.getString(0);
+                cCr.close();
+            }
+            
+            if (!drLedger.isEmpty() && !crLedger.isEmpty()) {
+                return drLedger + " (By) / " + crLedger + " (To)";
+            } else if (!drLedger.isEmpty()) {
+                return drLedger + " (By)";
+            } else if (!crLedger.isEmpty()) {
+                return crLedger + " (To)";
+            }
+        } else if (type.trim().equalsIgnoreCase("Receipt")) {
+             Cursor c = db.rawQuery("SELECT " + COLUMN_CHARGE_LEDGER_NAME + " FROM " + TABLE_VOUCHER_CHARGES + 
+                                     " WHERE " + COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=? AND " + COLUMN_CHARGE_IS_DEBIT + "=0 LIMIT 1", 
+                                     new String[]{String.valueOf(voucherId), type.trim()});
+             if (c != null) {
+                 if (c.moveToFirst()) {
+                     String party = c.getString(0);
+                     c.close();
+                     return party;
+                 }
+                 c.close();
+             }
+        } else if (type.equalsIgnoreCase("Payment")) {
+             Cursor c = db.rawQuery("SELECT " + COLUMN_CHARGE_LEDGER_NAME + " FROM " + TABLE_VOUCHER_CHARGES + 
+                                     " WHERE " + COLUMN_CHARGE_VOUCHER_ID + "=? AND " + COLUMN_CHARGE_VOUCHER_TYPE + "=? AND " + COLUMN_CHARGE_IS_DEBIT + "=1 LIMIT 1", 
+                                     new String[]{String.valueOf(voucherId), type});
+             if (c != null) {
+                 if (c.moveToFirst()) {
+                     String party = c.getString(0);
+                     c.close();
+                     return party;
+                 }
+                 c.close();
+             }
+        }
+
+        return defaultValue;
+    }
     
+    // Helper to calculate total for Journals/Receipts/Contras
+    private double getVoucherTotal(long voucherId, String type) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        double total = 0;
+        
+        String query = "SELECT SUM(" + COLUMN_CHARGE_AMOUNT + ") FROM " + TABLE_VOUCHER_CHARGES + 
+                       " WHERE " + COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=?";
+                       
+        if(type.trim().equalsIgnoreCase("Journal") || type.trim().equalsIgnoreCase("Contra") || type.trim().equalsIgnoreCase("Receipt")) {
+            // For Journal/Contra, sum Debits. For Receipt, sum Credits (party side)
+            query += " AND " + COLUMN_CHARGE_IS_DEBIT + (type.trim().equalsIgnoreCase("Receipt") ? "=0" : "=1");
+        }
+
+        Cursor c = db.rawQuery(query, new String[]{String.valueOf(voucherId), type.trim()});
+        if (c != null) {
+            if (c.moveToFirst()) {
+                total = c.getDouble(0);
+            }
+            c.close();
+        }
+        return total;
+    }
+
     // Helper Class for Summary
     public static class VoucherSummary {
         public int id;
@@ -1206,6 +1559,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
              return db.query(TABLE_PURCHASES, null, COLUMN_PURCHASE_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
         } else if (type.equals("Payment")) {
              return db.query(TABLE_PAYMENTS, null, COLUMN_PAYMENT_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        } else if (type.equals("Journal") || type.equals("Contra")) {
+             return db.query(TABLE_JOURNALS, null, COLUMN_JOURNAL_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        } else if (type.equals("Receipt")) {
+             return db.query(TABLE_RECEIPTS, null, COLUMN_RECEIPT_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
         }
         return null;
     }
@@ -1229,7 +1586,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery(query, null);
     }
     // --- Voucher Charges Methods ---
-    public void addVoucherCharge(long voucherId, String voucherType, int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate, boolean isDebit) {
+    public void addVoucherCharge(long voucherId, String voucherType, int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate, boolean isDebit, String paymentMode) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_CHARGE_VOUCHER_ID, voucherId);
@@ -1240,8 +1597,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_CHARGE_IS_PERCENTAGE, isPercentage ? 1 : 0);
         cv.put(COLUMN_CHARGE_RATE, rate);
         cv.put(COLUMN_CHARGE_IS_DEBIT, isDebit ? 1 : 0);
+        cv.put(COLUMN_CHARGE_PAYMENT_MODE, paymentMode);
         db.insert(TABLE_VOUCHER_CHARGES, null, cv);
     }
+
+    public void addVoucherCharge(long voucherId, String voucherType, int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate, boolean isDebit) {
+        addVoucherCharge(voucherId, voucherType, ledgerId, ledgerName, amount, isPercentage, rate, isDebit, "None");
+    }
+
 
     public void addVoucherCharge(long voucherId, String voucherType, int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate) {
         addVoucherCharge(voucherId, voucherType, ledgerId, ledgerName, amount, isPercentage, rate, false);
@@ -1287,15 +1650,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Cursor getVoucherCharges(long voucherId, String voucherType) {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.query(TABLE_VOUCHER_CHARGES, null, 
-            COLUMN_CHARGE_VOUCHER_ID + "=? AND " + COLUMN_CHARGE_VOUCHER_TYPE + "=?", 
-            new String[]{String.valueOf(voucherId), voucherType}, null, null, null);
+            COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=?", 
+            new String[]{String.valueOf(voucherId), voucherType.trim()}, null, null, null);
     }
     
     public void deleteVoucherCharges(long voucherId, String voucherType) {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_VOUCHER_CHARGES, 
-            COLUMN_CHARGE_VOUCHER_ID + "=? AND " + COLUMN_CHARGE_VOUCHER_TYPE + "=?", 
-            new String[]{String.valueOf(voucherId), voucherType});
+            COLUMN_CHARGE_VOUCHER_ID + "=? AND TRIM(" + COLUMN_CHARGE_VOUCHER_TYPE + ")=?", 
+            new String[]{String.valueOf(voucherId), voucherType.trim()});
     }
 
     // --- Delete Methods ---
@@ -1341,7 +1704,28 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             deleteVoucherCharges(id, "Payment");
             // Delete Payment
             db.delete(TABLE_PAYMENTS, COLUMN_PAYMENT_ID + "=?", new String[]{String.valueOf(id)});
+        } else if (type.equals("Journal") || type.equalsIgnoreCase("Contra")) {
+            deleteVoucherCharges(id, type);
+            db.delete(TABLE_JOURNALS, COLUMN_JOURNAL_ID + "=?", new String[]{String.valueOf(id)});
+        } else if (type.equalsIgnoreCase("Receipt")) {
+            deleteVoucherCharges(id, "Receipt");
+            db.delete(TABLE_RECEIPTS, COLUMN_RECEIPT_ID + "=?", new String[]{String.valueOf(id)});
         }
+    }
+
+    public void clearAllJournals(int companyId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        // Delete associated charges first
+        db.execSQL("DELETE FROM " + TABLE_VOUCHER_CHARGES + " WHERE " + COLUMN_CHARGE_VOUCHER_TYPE + "='Journal' AND " +
+                   COLUMN_CHARGE_VOUCHER_ID + " IN (SELECT " + COLUMN_JOURNAL_ID + " FROM " + TABLE_JOURNALS + " WHERE " + COLUMN_COMPANY_ID + "=? AND " + COLUMN_JOURNAL_TYPE + "='Journal')", new Object[]{companyId});
+        db.delete(TABLE_JOURNALS, COLUMN_COMPANY_ID + "=? AND (" + COLUMN_JOURNAL_TYPE + "=? OR " + COLUMN_JOURNAL_TYPE + " IS NULL)", new String[]{String.valueOf(companyId), "Journal"});
+    }
+
+    public void clearAllContras(int companyId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + TABLE_VOUCHER_CHARGES + " WHERE " + COLUMN_CHARGE_VOUCHER_TYPE + "='Contra' AND " +
+                   COLUMN_CHARGE_VOUCHER_ID + " IN (SELECT " + COLUMN_JOURNAL_ID + " FROM " + TABLE_JOURNALS + " WHERE " + COLUMN_COMPANY_ID + "=? AND " + COLUMN_JOURNAL_TYPE + "='Contra')", new Object[]{companyId});
+        db.delete(TABLE_JOURNALS, COLUMN_COMPANY_ID + "=? AND " + COLUMN_JOURNAL_TYPE + "=?", new String[]{String.valueOf(companyId), "Contra"});
     }
     
     public void updateInvoice(long id, Invoice invoice) {
@@ -1456,13 +1840,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } else if (type.equals("Payment")) {
             table = TABLE_PAYMENTS;
             column = COLUMN_PAYMENT_VOUCHER_NO;
+        } else if (type.equals("Journal")) {
+            table = TABLE_JOURNALS;
+            column = COLUMN_JOURNAL_NO;
+        } else if (type.equals("Contra")) {
+            // Contra usually shares numbering with Journal or has its own. Assuming Journal for now or sharing? 
+            // Better to have separate or same. Let's assume separate table or same? 
+            // In onCreate, I don't see TABLE_CONTRA. 
+            // Wait, looking at saveVoucher: if type is Journal OR Contra, it calls addJournal. 
+            // So Contra uses TABLE_JOURNALS.
+            table = TABLE_JOURNALS;
+            column = COLUMN_JOURNAL_NO;
+        } else if (type.equals("Receipt")) {
+            table = TABLE_RECEIPTS;
+            column = COLUMN_RECEIPT_NO;
         }
         
         if (table.isEmpty()) return 1;
 
         // Use MAX(CAST(column AS INTEGER)) to ensure unique numbers even after deletion
         String query = "SELECT MAX(CAST(" + column + " AS INTEGER)) FROM " + table + " WHERE " + COLUMN_COMPANY_ID + "=?";
-        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(companyId)});
+        String[] args;
+        if (type.equals("Journal") || type.equals("Contra")) {
+            query += " AND " + COLUMN_JOURNAL_TYPE + "=?";
+            args = new String[]{String.valueOf(companyId), type};
+        } else {
+            args = new String[]{String.valueOf(companyId)};
+        }
+        
+        Cursor cursor = db.rawQuery(query, args);
         long max = 0;
         if (cursor != null) {
             if (cursor.moveToFirst()) {
@@ -1473,7 +1879,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return max + 1;
     }
     // --- Company Methods ---
-    public long addCompany(String name, String address, String mobile, String phone2, String email, String state, String logoUri, String gst, String tagline) {
+    public long addCompany(String name, String address, String mobile, String phone2, String email, String state, String logoUri, String gst, String tagline, String cst, String tin, String vatTin) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_COMPANY_NAME, name);
@@ -1485,6 +1891,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_COMPANY_LOGO, logoUri);
         cv.put(COLUMN_COMPANY_GST, gst);
         cv.put(COLUMN_COMPANY_TAGLINE, tagline);
+        cv.put(COLUMN_COMPANY_CST, cst);
+        cv.put(COLUMN_COMPANY_TIN, tin);
+        cv.put(COLUMN_COMPANY_VAT_TIN, vatTin);
         return db.insert(TABLE_COMPANIES, null, cv);
     }
     
@@ -1535,23 +1944,73 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public long addJournal(String voucherNo, String date, String narration, int companyId) {
+    public long addJournal(String voucherNo, String date, String narration, String type, int companyId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_JOURNAL_NO, voucherNo);
         cv.put(COLUMN_JOURNAL_DATE, date);
         cv.put(COLUMN_JOURNAL_NARRATION, narration);
+        cv.put(COLUMN_JOURNAL_TYPE, type);
         cv.put(COLUMN_COMPANY_ID, companyId);
         return db.insert(TABLE_JOURNALS, null, cv);
     }
-
-    public long addReceipt(String voucherNo, String date, String narration, int companyId) {
+    
+    public void updateJournal(long id, String voucherNo, String date, String narration, String type) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
-        cv.put(COLUMN_RECEIPT_NO, voucherNo);
+        cv.put(COLUMN_JOURNAL_NO, voucherNo);
+        cv.put(COLUMN_JOURNAL_DATE, date);
+        cv.put(COLUMN_JOURNAL_NARRATION, narration);
+        cv.put(COLUMN_JOURNAL_TYPE, type);
+        db.update(TABLE_JOURNALS, cv, COLUMN_JOURNAL_ID + "=?", new String[]{String.valueOf(id)});
+    }
+
+    public long addReceipt(String no, String date, String narration, String through, double total, int companyId, String paymentMode) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_RECEIPT_NO, no);
         cv.put(COLUMN_RECEIPT_DATE, date);
         cv.put(COLUMN_RECEIPT_NARRATION, narration);
+        cv.put(COLUMN_RECEIPT_THROUGH, through);
+        cv.put(COLUMN_RECEIPT_TOTAL, total);
         cv.put(COLUMN_COMPANY_ID, companyId);
-        return db.insert(TABLE_RECEIPTS, null, cv);
+        cv.put(COLUMN_RECEIPT_PAYMENT_MODE, paymentMode);
+        try {
+            return db.insertOrThrow(TABLE_RECEIPTS, null, cv);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Try adding the column if it's missing (Self-healing)
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_PAYMENT_MODE + " TEXT");
+                // Retry insert
+                return db.insertOrThrow(TABLE_RECEIPTS, null, cv);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return -1;
+            }
+        }
+    }
+    
+    public void updateReceipt(long id, String no, String date, String narration, String through, double total, String paymentMode) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_RECEIPT_NO, no);
+        cv.put(COLUMN_RECEIPT_DATE, date);
+        cv.put(COLUMN_RECEIPT_NARRATION, narration);
+        cv.put(COLUMN_RECEIPT_THROUGH, through);
+        cv.put(COLUMN_RECEIPT_TOTAL, total);
+        cv.put(COLUMN_RECEIPT_PAYMENT_MODE, paymentMode);
+        db.update(TABLE_RECEIPTS, cv, COLUMN_RECEIPT_ID + "=?", new String[]{String.valueOf(id)});
+    }
+    
+    public void updatePayment(long id, String voucherNo, String date, String through, double total, String narration) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COLUMN_PAYMENT_VOUCHER_NO, voucherNo);
+        cv.put(COLUMN_PAYMENT_DATE, date);
+        cv.put(COLUMN_PAYMENT_THROUGH_LEDGER, through);
+        cv.put(COLUMN_PAYMENT_TOTAL_AMOUNT, total);
+        cv.put(COLUMN_PAYMENT_NARRATION, narration);
+        db.update(TABLE_PAYMENTS, cv, COLUMN_PAYMENT_ID + "=?", new String[]{String.valueOf(id)});
     }
 }

@@ -1,0 +1,12 @@
+Event,Source,Trigger,Processing Logic,System Output / Action
+Setup Company,User,App initialization,Create SQLite database and default ledger groups,Dashboard UI ready for use
+Add Ledger/Item,User,"Click ""Save"" in Masters","Validate uniqueness, sanitize inputs, and commit to tables","""Master Saved Successfully"" Toast"
+Record Sales,User,"""Save & View PDF"" click","Deduct stock, calculate GST, and insert transaction",Sequential Invoice Number assigned
+Record Purchase,User,Save transaction,Increment stock levels and update supplier ledger,Updated Inventory Stock Reports
+Voucher Entry,User,Save Voucher,"Multi-ledger balance validation; update tables",Voucher PDF document generated
+View Daybook,User,Opening Daybook page,Query vouchers and invoices for current date,Categorized list of daily transactions
+Low Stock Alert,System,Item qty < threshold,Monitor stock levels during every Sales transaction,Visual indicator in Item List
+Backup Data,User,Trigger Backup,Export SQLite and upload to Firebase Cloud,Cloud Success confirmation message
+Restore Data,User,Trigger Restore,Download backup and overwrite local DB,App refresh with restored data
+Generate Report,User,Date range selection,Aggregate data from transaction tables,Dynamic Chart/PDF Report creation
+Excel to PDF,System,"""View"" request",Pass Excel URI to Document Engine,Professional A4 Invoice Document

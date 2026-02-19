@@ -16,9 +16,9 @@
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/secondary_variant"
+            android:background="?attr/colorPrimary"
             app:title="Purchase Entry"
-            app:titleTextColor="@color/on_secondary"
+            app:titleTextColor="@color/on_primary"
             app:navigationIcon="@drawable/ic_arrow_back" 
             app:navigationIconTint="@color/white"
             style="@style/Widget.Material3.Toolbar.Surface" />
@@ -40,7 +40,6 @@
             <TextView
                 android:text="Supplier Details"
                 style="@style/SectionHeader"
-                android:textColor="@color/secondary_variant"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
@@ -57,7 +56,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Invoice Number (Supplier Ref)"
+                        android:hint="Voucher Number (Internal)"
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -70,16 +69,53 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Date (DD-MM-YYYY)"
+                        android:hint="Supplier Invoice Number"
                         android:layout_marginTop="8dp"
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etDate"
+                            android:id="@+id/etSupplierInvNo"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="date" />
+                            android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:hint="Date (DD-MM-YYYY)"
+                            android:layout_marginEnd="4dp"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etDate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="date" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:hint="Supplier Inv Date"
+                            android:layout_marginStart="4dp"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSupplierInvDate"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="date" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -95,6 +131,58 @@
                             android:inputType="textPersonName" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <!-- Tax Info Row 1 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:hint="Supplier CST No."
+                            android:layout_marginEnd="4dp"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSupplierCst"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:hint="Supplier TIN"
+                            android:layout_marginStart="4dp"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSupplierTin"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Buyer's VAT TIN"
+                        android:layout_marginTop="8dp"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etBuyerVatTin"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -102,9 +190,9 @@
             <TextView
                 android:text="Stock In"
                 style="@style/SectionHeader"
-                android:textColor="@color/secondary_variant"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:layout_marginTop="16dp"/>
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/DashboardCard"
@@ -129,6 +217,20 @@
                                 android:inputType="text" />
                         </com.google.android.material.textfield.TextInputLayout>
 
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="HSN"
+                            android:layout_marginTop="8dp"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etHsn"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -140,7 +242,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="Qty"
-                            android:layout_marginEnd="2dp"
+                            android:layout_marginEnd="4dp"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -155,7 +257,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="Unit"
-                            android:layout_marginHorizontal="2dp"
+                            android:layout_marginHorizontal="4dp"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -164,28 +266,13 @@
                                 android:layout_height="wrap_content"
                                 android:inputType="text" />
                         </com.google.android.material.textfield.TextInputLayout>
-                        
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
-                            android:hint="HSN"
-                            android:layout_marginHorizontal="2dp"
-                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etHsn"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:inputType="text" />
-                        </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1.2"
+                            android:layout_weight="1"
                             android:hint="Rate"
-                            android:layout_marginStart="2dp"
+                            android:layout_marginStart="4dp"
                             style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -211,7 +298,6 @@
              <TextView
                 android:text="Item List"
                 style="@style/SectionHeader"
-                android:textColor="@color/secondary_variant"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
@@ -265,7 +351,7 @@
                 android:id="@+id/rvInvoiceItems"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
-               tools:listitem="@layout/item_invoice_row"/>
+                tools:listitem="@layout/item_invoice_row"/>
 
             <!-- Total and Actions -->
             <com.google.android.material.card.MaterialCardView
@@ -273,12 +359,48 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/secondary_variant">
+                app:cardBackgroundColor="?attr/colorPrimaryContainer">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
+
+                    <!-- Charges Integrations -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOutline"
+                        android:layout_marginVertical="8dp"/>
+                        
+                    <TextView
+                        android:text="Add. Charges / Taxes:"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="12sp"
+                        android:textStyle="italic"/>
+                        
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvCharges"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        tools:listitem="@layout/item_charge_row"
+                        tools:itemCount="2"/>
+                    
+                    <Button
+                        android:id="@+id/btnAddCharge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ Add Charge"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_gravity="end"/>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOutline"
+                        android:layout_marginVertical="8dp"/>
 
                     <TextView
                         android:id="@+id/tvTotalAmount"
@@ -288,17 +410,31 @@
                         android:textSize="24sp"
                         android:textStyle="bold"
                         android:gravity="end"
-                        android:textColor="@color/on_secondary"/>
+                        android:textColor="?attr/colorOnPrimaryContainer"/>
 
                     <Button
-                        android:id="@+id/btnSaveInvoice"
+                        android:id="@+id/btnSavePurchase"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Save Purchase"
                         android:layout_marginTop="16dp"
-                        style="@style/Widget.Material3.Button"
-                        app:backgroundTint="@color/on_secondary"
-                        android:textColor="@color/secondary_variant"/>
+                        style="@style/Widget.Material3.Button"/>
+
+                    <Button
+                        android:id="@+id/btnViewPdf"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Print &amp; Share PDF"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginTop="8dp"/>
+
+                    <Button
+                        android:id="@+id/btnExcelShare"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Share Excel"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginTop="8dp"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

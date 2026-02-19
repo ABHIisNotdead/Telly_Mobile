@@ -46,6 +46,26 @@ public class ExcelGenerator {
         this.context = context;
     }
 
+    public String generateInvoice(Invoice invoice, String format) {
+        try {
+            Workbook workbook = createWorkbook(invoice);
+            File docsDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Invoices");
+            if (!docsDir.exists()) docsDir.mkdirs();
+            
+            String fileName = "Invoice_" + invoice.getInvoiceNumber() + ".xlsx";
+            File outputFile = new File(docsDir, fileName);
+            FileOutputStream out = new FileOutputStream(outputFile);
+            workbook.write(out);
+            out.close();
+            workbook.close();
+            
+            return outputFile.getAbsolutePath();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private void showToast(final String message) {
         new Handler(Looper.getMainLooper()).post(() -> 
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -59,7 +79,12 @@ public class ExcelGenerator {
                 saveAndOpen(workbook, invoice.getInvoiceNumber());
             } catch (Exception e) {
                 e.printStackTrace();
-                showToast("Error generating Excel: " + e.getMessage());
+                String msg = e.getMessage();
+                if (msg != null && msg.contains("used by another process")) {
+                    showToast("Error: Excel file is open in another app. Please close Excel and try again.");
+                } else {
+                    showToast("Error generating Excel: " + e.getMessage());
+                }
             }
         }).start();
     }
@@ -79,12 +104,16 @@ public class ExcelGenerator {
         
         boolean isPayment = "PAYMENT".equals(invoice.getBuyersOrderNo());
         boolean isJournal = "JOURNAL".equals(invoice.getBuyersOrderNo()) || "CONTRA".equals(invoice.getBuyersOrderNo());
+        boolean isPurchase = "Purchase".equalsIgnoreCase(invoice.getModeOfPayment()); // Case insensitive check
         
         if (hasPaymentTemplate && isPayment) {
              templateName = "PaymentVoucher.xlsx";
         } else if (isJournal) {
-             // If we had JournalVoucher.xlsx, we would use it here
-             // For now we'll use processManualJournal or similar
+             templateName = "JournalVoucher.xlsx";
+        } else if (isPurchase) {
+             templateName = "purchaseVoucher.xlsx";
+        } else if ("RECEIPT".equals(invoice.getBuyersOrderNo())) {
+             templateName = "ReceiptVoucher.xlsx";
         }
 
         boolean hasTemplate = false;
@@ -127,9 +156,32 @@ public class ExcelGenerator {
         }
 
         Map<String, String> data = new HashMap<>();
+        Map<String, String> companyData = fetchCompanyData();
+        
+        data.put("{{VOUCHER_NAME}}", invoice.getCustomerName());
+        data.put("{{VOUCHER_TYPE}}", invoice.getBuyersOrderNo());
         data.put("{{INVOICE_NO}}", invoice.getInvoiceNumber());
         data.put("{{DATE}}", invoice.getDate());
         data.put("{{CUSTOMER_NAME}}", invoice.getCustomerName());
+        
+        // New Purchase Fields
+        data.put("{{SUPPLIER_INV_DATE}}", checkNull(invoice.getSupplierInvDate()));
+        // Use the explicit supplier inv no if available, else fallback
+        String supInvNo = invoice.getSupplierInvNo();
+        if (supInvNo == null || supInvNo.isEmpty()) supInvNo = invoice.getInvoiceNumber(); 
+        data.put("{{SUPPLIER_INV_NO}}", supInvNo);
+        data.put("{{BUYER_VAT_TIN}}", checkNull(invoice.getBuyerVatTin()));
+        
+        // New Company Fields (Prefer Voucher specific if set)
+        String cst = invoice.getSupplierCst();
+        if (cst == null || cst.isEmpty()) cst = companyData.get("CST");
+        data.put("{{COMPANY_CST_NO}}", checkNull(cst));
+
+        String tin = invoice.getSupplierTin();
+        if (tin == null || tin.isEmpty()) tin = companyData.get("TIN");
+        data.put("{{COMPANY_TIN_SALES_TAX_NO}}", checkNull(tin));
+        data.put("{{COMPANY_TIN}}", checkNull(tin)); // Alias
+        
         data.put("{{SUBTOTAL}}", String.format("%.2f", invoice.getTotalAmount()));
         
         double totalTax = invoice.getTotalTaxAmount();
@@ -168,10 +220,42 @@ public class ExcelGenerator {
         data.put("{{BUYER_GST}}", checkNull(invoice.getBuyerGst()));
         data.put("{{BUYER_STATE}}", checkNull(invoice.getBuyerState()));
 
+        // Also map to SUPPLIER keys for Purchase Vouchers
+        data.put("{{SUPPLIER_ADDRESS}}", checkNull(invoice.getBuyerAddress()));
+        data.put("{{SUPPLIER_GST}}", checkNull(invoice.getBuyerGst()));
+        data.put("{{SUPPLIER_STATE}}", checkNull(invoice.getBuyerState()));
+
         data.put("{{CONSIGNEE_NAME}}", checkNull(invoice.getConsigneeName()));
         data.put("{{CONSIGNEE_ADDRESS}}", checkNull(invoice.getConsigneeAddress()));
         data.put("{{CONSIGNEE_GST}}", checkNull(invoice.getConsigneeGst()));
         data.put("{{CONSIGNEE_STATE}}", checkNull(invoice.getConsigneeState()));
+        
+        // [PURCHASE SPECIFIC] Override Consignee with User Company Details (Self)
+        // And ensure Buyer keys map to Supplier (already handled by Invoice population)
+        if ("Purchase".equalsIgnoreCase(invoice.getModeOfPayment())) {
+             data.put("{{CONSIGNEE_NAME}}", companyData.getOrDefault("NAME", ""));
+             data.put("{{CONSIGNEE_ADDRESS}}", companyData.getOrDefault("ADDRESS", ""));
+             data.put("{{CONSIGNEE_GST}}", companyData.getOrDefault("GST", ""));
+             data.put("{{CONSIGNEE_STATE}}", companyData.getOrDefault("STATE", ""));
+             // Also support specific Supplier keys if template uses them
+             data.put("{{SUPPLIER_NAME}}", invoice.getCustomerName());
+        }
+        
+        // [RECEIPT SPECIFIC]
+        if ("Receipt".equalsIgnoreCase(invoice.getBuyersOrderNo()) || "Receipt".equalsIgnoreCase(invoice.getModeOfPayment())) {
+             data.put("{{PAYER_LEDGER_NAME}}", invoice.getCustomerName());
+             data.put("{{LEDGER_NAME}}", invoice.getCustomerName()); // Fallback/Alias
+             data.put("{{THROUGH}}", checkNull(invoice.getDispatchThrough()));
+             data.put("{{CR}}", String.format("%.2f", invoice.getGrandTotal())); // Added per user request
+             
+             // Determine Mode of Payment (Cash or Bank)
+             String mode = checkNull(invoice.getModeOfPayment());
+             if (mode.isEmpty()) {
+                 String throughVal = checkNull(invoice.getDispatchThrough());
+                 mode = throughVal.toLowerCase().contains("cash") ? "Cash" : "Bank";
+             }
+             data.put("{{MODE_OF_PAYMENT}}", mode);
+        }
         
         // Calculate Totals for Key Mapping
         double totalTaxableVal = 0;
@@ -205,7 +289,8 @@ public class ExcelGenerator {
         double manualRoundOff = 0;
         if (invoice.getExtraCharges() != null) {
             for (InvoiceCharge charge : invoice.getExtraCharges()) {
-                if (charge.getChargeName().equalsIgnoreCase("Round Off")) {
+                String cName = charge.getChargeName().toLowerCase();
+                if (cName.contains("round") && cName.contains("off")) {
                     manualRoundOff = charge.getAmount();
                     break;
                 }
@@ -223,7 +308,9 @@ public class ExcelGenerator {
              data.put("{{BANK_NAME}}", ""); data.put("{{BANK_AC}}", ""); data.put("{{BANK_IFSC}}", ""); data.put("{{BANK_BRANCH}}", "");
         }
         
-        Map<String, String> companyData = fetchCompanyData();
+
+        data.put("{{COMPANY_NAME}}", companyData.getOrDefault("NAME", ""));
+        data.put("{{COMPANY_ADDRESS}}", companyData.getOrDefault("ADDRESS", ""));
         data.put("{{COMPANY_PAN}}", companyData.getOrDefault("PAN", ""));
         
         data.put("{{BUYER_EMAIL}}", checkNull(invoice.getBuyerEmail()));
@@ -231,6 +318,12 @@ public class ExcelGenerator {
         data.put("{{CONSIGNEE_EMAIL}}", checkNull(invoice.getConsigneeEmail()));
         data.put("{{CONSIGNEE_MOBILE}}", checkNull(invoice.getConsigneeMobile()));
         data.put("{{BS_ORDER_DATE}}", checkNull(invoice.getBuyersOrderDate())); 
+        
+        // Transaction Mode (Cash/Bank/Mode of Payment)
+        String mode = checkNull(invoice.getModeOfPayment());
+        if (mode.isEmpty()) mode = checkNull(invoice.getDispatchThrough()); // Fallback to 'Through' for Payment/Receipt
+        data.put("{{TRANSACTION_MODE}}", mode);
+        data.put("{{PAYMENT_MODE}}", mode); 
 
         double totalQty = 0;
         if (invoice.getItems() != null) {
@@ -239,6 +332,18 @@ public class ExcelGenerator {
             }
         }
         data.put("{{TOTAL_QTY}}", String.valueOf(totalQty));
+
+        // Journal Footer Totals
+        double totalDebit = 0;
+        double totalCredit = 0;
+        if (invoice.getExtraCharges() != null) {
+            for (InvoiceCharge ic : invoice.getExtraCharges()) {
+                if (ic.isDebit()) totalDebit += ic.getAmount();
+                else totalCredit += ic.getAmount();
+            }
+        }
+        data.put("{{TOTAL_DEBIT}}", String.format("%.2f", totalDebit));
+        data.put("{{TOTAL_CREDIT}}", String.format("%.2f", totalCredit));
 
 
         // Search and replace headers for CGST/SGST
@@ -273,7 +378,7 @@ public class ExcelGenerator {
         if (itemRowIndex != -1) {
              Row sourceRow = sheet.getRow(itemRowIndex);
              Map<String, Integer> colMap = new HashMap<>();
-             for (Cell cell : sourceRow) {
+             for (Cell cell : sourceRow) { if (cell.getCellType() == CellType.STRING) { String kmapText = cell.getStringCellValue(); if (kmapText.contains("{{BY_TO}}")) colMap.put("{{BY_TO}}", cell.getColumnIndex()); if (kmapText.contains("{{DR_CR}}")) colMap.put("{{DR_CR}}", cell.getColumnIndex()); if (kmapText.contains("{{AMOUNT_DR_CR}}")) colMap.put("{{AMOUNT_DR_CR}}", cell.getColumnIndex()); if (kmapText.contains("{{BY_PARTICULARS}}")) colMap.put("{{BY_PARTICULARS}}", cell.getColumnIndex()); if (kmapText.contains("{{TO_PARTICULARS}}")) colMap.put("{{TO_PARTICULARS}}", cell.getColumnIndex()); if (kmapText.contains("{{TRANSACTION_MODE}}")) colMap.put("{{TRANSACTION_MODE}}", cell.getColumnIndex()); }
                  if (cell.getCellType() == CellType.STRING) {
                      String text = cell.getStringCellValue();
                      if (text.contains("{{ITEM_NAME}}")) colMap.put("{{ITEM_NAME}}", cell.getColumnIndex());
@@ -330,79 +435,163 @@ public class ExcelGenerator {
              }
         }
 
-        // 2.1 Handle Charges Row
-        int chargeRowIndex = -1;
+        // 2.1 Handle Charges Row (Supports Multi-Row Blocks)
+        int chargeRowStartIndex = -1;
+        int chargeBlockSize = 1;
+        
+        // Find first row containing charge keys
         for (Row row : sheet) {
+            boolean rowHasKeys = false;
             for (Cell cell : row) {
                 if (cell.getCellType() == CellType.STRING) {
-                    String val = cell.getStringCellValue();
-                    if (val.contains("{{CHARGE_NAME}}") || val.contains("{{OTHER_CHARGES}}") || val.contains("{{PARTICULARS}}") || val.contains("{{ACCOUNT}}")) {
-                        chargeRowIndex = row.getRowNum();
+                    String val = cell.getStringCellValue().toUpperCase();
+                    if (val.contains("{{CHARGE_NAME}}") || val.contains("{{OTHER_CHARGES}}") || val.contains("{{PARTICULARS}}") || val.contains("{{ACCOUNT}}") || 
+                        val.contains("{{DEBIT_AMOUNT}}") || val.contains("{{CREDIT_AMOUNT}}") ||
+                        val.contains("{{BY_TO}}") || val.contains("{{DR_CR}}") || val.contains("{{BY_PARTICULARS}}") || val.contains("{{TO_PARTICULARS}}") ||
+                        val.contains("{{AMOUNT_DR_CR}}") || val.contains("{{TRANSACTION_MODE}}") || val.contains("{{PAYMENT_MODE}}")) {
+                        rowHasKeys = true;
                         break;
                     }
                 }
             }
-            if (chargeRowIndex != -1) break;
+            if (rowHasKeys) {
+                chargeRowStartIndex = row.getRowNum();
+                break;
+            }
         }
 
-        if (chargeRowIndex != -1) {
-             Row sourceRow = sheet.getRow(chargeRowIndex);
-             Map<String, Integer> colMap = new HashMap<>();
-             for (Cell cell : sourceRow) {
-                 if (cell.getCellType() == CellType.STRING) {
-                     String text = cell.getStringCellValue();
-                     if (text.contains("{{CHARGE_NAME}}") || text.contains("{{OTHER_CHARGES}}") || text.contains("{{PARTICULARS}}") || text.contains("{{ACCOUNT}}")) colMap.put("{{CHARGE_NAME}}", cell.getColumnIndex());
-                     if (text.contains("{{CHARGE_AMOUNT}}") || text.contains("{{AMOUNT}}")) colMap.put("{{CHARGE_AMOUNT}}", cell.getColumnIndex());
-                     if (text.contains("{{CHARGE_RATE}}") || text.contains("{{RATE}}")) colMap.put("{{CHARGE_RATE}}", cell.getColumnIndex());
-                 }
-             }
-             
-             java.util.List<InvoiceCharge> charges = invoice.getExtraCharges();
-             int chargeCount = charges != null ? charges.size() : 0;
-             if (chargeCount > 0) {
-                  if (chargeCount > 1) {
-                      sheet.shiftRows(chargeRowIndex + 1, sheet.getLastRowNum(), chargeCount - 1);
-                  }
-                  for (int i = 0; i < chargeCount; i++) {
-                      InvoiceCharge charge = charges.get(i);
-                      Row currentRow = (i == 0) ? sourceRow : sheet.createRow(chargeRowIndex + i);
-                      if (i > 0) {
-                          for (int j = 0; j < sourceRow.getLastCellNum(); j++) {
-                              Cell src = sourceRow.getCell(j);
-                              Cell newC = currentRow.createCell(j);
-                              if(src != null) {
-                                  newC.setCellStyle(src.getCellStyle());
-                              }
-                          }
-                          copyMergedRegions(sheet, chargeRowIndex, currentRow.getRowNum());
-                      }
-                      fillCell(currentRow, colMap.get("{{CHARGE_NAME}}"), charge.getChargeName());
-                      setAlignment(currentRow, colMap.get("{{CHARGE_NAME}}"), HorizontalAlignment.RIGHT);
-                      fillCell(currentRow, colMap.get("{{CHARGE_AMOUNT}}"), String.format("%.2f", charge.getAmount()));
-                      setAlignment(currentRow, colMap.get("{{CHARGE_AMOUNT}}"), HorizontalAlignment.CENTER);
-                      String rateStr = charge.isPercentage() ? charge.getRate() + "%" : "";
-                      fillCell(currentRow, colMap.get("{{CHARGE_RATE}}"), rateStr);
-                      setAlignment(currentRow, colMap.get("{{CHARGE_RATE}}"), HorizontalAlignment.RIGHT);
-                  }
-             } else {
-                 sheet.removeRow(sourceRow);
-             }
+        if (chargeRowStartIndex != -1) {
+            // Check if subsequent rows are part of the same template block
+            for (int r = chargeRowStartIndex + 1; r <= sheet.getLastRowNum(); r++) {
+                Row nextRow = sheet.getRow(r);
+                if (nextRow == null) break;
+                boolean nextRowHasKeys = false;
+                for (Cell cell : nextRow) {
+                    if (cell.getCellType() == CellType.STRING) {
+                        String val = cell.getStringCellValue().toUpperCase();
+                        if (val.contains("{{BY_TO}}") || val.contains("{{DR_CR}}") || val.contains("{{AMOUNT_DR_CR}}") || 
+                            val.contains("{{PAYMENT_MODE}}") || val.contains("{{DEBIT_AMOUNT}}") || val.contains("{{CREDIT_AMOUNT}}")) {
+                            nextRowHasKeys = true;
+                            break;
+                        }
+                    }
+                }
+                if (nextRowHasKeys) chargeBlockSize++;
+                else break; 
+            }
+
+            java.util.List<InvoiceCharge> charges = invoice.getExtraCharges();
+            int chargeCount = charges != null ? charges.size() : 0;
+            
+            if (chargeCount > 0) {
+                // 1. Shift and Clone first while template is clean
+                if (chargeCount > 1) {
+                    sheet.shiftRows(chargeRowStartIndex + chargeBlockSize, sheet.getLastRowNum(), (chargeCount - 1) * chargeBlockSize);
+                    for (int i = 1; i < chargeCount; i++) {
+                        int currentBlockStart = chargeRowStartIndex + (i * chargeBlockSize);
+                        for (int b = 0; b < chargeBlockSize; b++) {
+                            Row templateRow = sheet.getRow(chargeRowStartIndex + b);
+                            Row targetRow = sheet.createRow(currentBlockStart + b);
+                            if (templateRow != null) {
+                                targetRow.setHeight(templateRow.getHeight());
+                                for (int j = 0; j < templateRow.getLastCellNum(); j++) {
+                                    Cell src = templateRow.getCell(j);
+                                    if (src != null) {
+                                        Cell newC = targetRow.createCell(j);
+                                        newC.setCellStyle(src.getCellStyle());
+                                        if (src.getCellType() == CellType.STRING) {
+                                            newC.setCellValue(src.getStringCellValue());
+                                        } else if (src.getCellType() == CellType.NUMERIC) {
+                                            newC.setCellValue(src.getNumericCellValue());
+                                        } else if (src.getCellType() == CellType.BOOLEAN) {
+                                            newC.setCellValue(src.getBooleanCellValue());
+                                        } else if (src.getCellType() == CellType.FORMULA) {
+                                            newC.setCellFormula(src.getCellFormula());
+                                        }
+                                    }
+                                }
+                                copyMergedRegions(sheet, chargeRowStartIndex + b, targetRow.getRowNum());
+                            }
+                        }
+                    }
+                }
+
+                // 2. Perform replacements on each block
+                for (int i = 0; i < chargeCount; i++) {
+                    InvoiceCharge charge = charges.get(i);
+                    int currentBlockStart = chargeRowStartIndex + (i * chargeBlockSize);
+                    
+                    for (int b = 0; b < chargeBlockSize; b++) {
+                        Row targetRow = sheet.getRow(currentBlockStart + b);
+                        if (targetRow == null) continue;
+
+                        for (Cell cell : targetRow) {
+                            if (cell.getCellType() == CellType.STRING) {
+                                String text = cell.getStringCellValue();
+                                String original = text;
+
+                                String typeForLabel = invoice.getModeOfPayment();
+                                boolean isContra = "Contra".equalsIgnoreCase(typeForLabel);
+
+                                text = replaceKeyInsensitive(text, "{{CHARGE_NAME}}", charge.getChargeName());
+                                text = replaceKeyInsensitive(text, "{{OTHER_CHARGES}}", charge.getChargeName());
+                                text = replaceKeyInsensitive(text, "{{PARTICULARS}}", charge.getChargeName());
+                                text = replaceKeyInsensitive(text, "{{ACCOUNT}}", charge.getChargeName());
+                                text = replaceKeyInsensitive(text, "{{LEDGER_NAME}}", charge.getChargeName());
+                                
+                                String byPre = isContra ? "Dr" : "By";
+                                String toPre = isContra ? "Cr" : "To";
+                                
+                                text = replaceKeyInsensitive(text, "{{BY_PARTICULARS}}", charge.isDebit() ? charge.getChargeName() : "");
+                                text = replaceKeyInsensitive(text, "{{TO_PARTICULARS}}", !charge.isDebit() ? charge.getChargeName() : "");
+                                text = replaceKeyInsensitive(text, "{{BY_TO}}", charge.isDebit() ? byPre : toPre);
+                                text = replaceKeyInsensitive(text, "{{DR_CR}}", charge.isDebit() ? "Dr" : "Cr");
+                                text = replaceKeyInsensitive(text, "{{AMOUNT_DR_CR}}", String.format("%.2f %s", charge.getAmount(), charge.isDebit() ? "Dr" : "Cr"));
+                                text = replaceKeyInsensitive(text, "{{CHARGE_AMOUNT}}", String.format("%.2f", charge.getAmount()));
+                                text = replaceKeyInsensitive(text, "{{AMOUNT}}", String.format("%.2f", charge.getAmount()));
+                                text = replaceKeyInsensitive(text, "{{DEBIT_AMOUNT}}", charge.isDebit() ? String.format("%.2f", charge.getAmount()) : "");
+                                text = replaceKeyInsensitive(text, "{{CREDIT_AMOUNT}}", !charge.isDebit() ? String.format("%.2f", charge.getAmount()) : "");
+                                text = replaceKeyInsensitive(text, "{{TRANSACTION_MODE}}", data.getOrDefault("{{TRANSACTION_MODE}}", ""));
+                                text = replaceKeyInsensitive(text, "{{PAYMENT_MODE}}", charge.getPaymentMode());
+                                
+                                String rateStr = charge.isPercentage() ? charge.getRate() + "%" : "";
+                                text = replaceKeyInsensitive(text, "{{CHARGE_RATE}}", rateStr);
+                                text = replaceKeyInsensitive(text, "{{RATE}}", rateStr);
+
+                                if (!text.equals(original)) {
+                                    cell.setCellValue(text);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (int b = 0; b < chargeBlockSize; b++) {
+                    Row row = sheet.getRow(chargeRowStartIndex + b);
+                    if (row != null) sheet.removeRow(row);
+                }
+            }
         }
 
-        // 3. Global Replace
+        // 3. Global Replace (Supports Embedded Placeholders)
         for (Row row : sheet) {
             for (Cell cell : row) {
                 if (cell.getCellType() == CellType.STRING) {
                     String text = cell.getStringCellValue();
-                    if (data.containsKey(text)) {
-                        cell.setCellValue(data.get(text));
-                        if (text.contains("SUBTOTAL") || text.contains("TOTAL_TAX") || text.contains("GRAND_TOTAL") || text.contains("TOTAL_QTY")) {
+                    String original = text;
+                    for (Map.Entry<String, String> entry : data.entrySet()) {
+                        text = replaceKeyInsensitive(text, entry.getKey(), entry.getValue());
+                    }
+                    if (!text.equals(original)) {
+                        cell.setCellValue(text);
+                        if (original.contains("SUBTOTAL") || original.contains("TOTAL_TAX") || original.contains("GRAND_TOTAL") || original.contains("TOTAL_QTY")) {
                             setAlignment(row, cell.getColumnIndex(), HorizontalAlignment.CENTER);
                         }
                     }
                 }
             }
         }
+
         
         // 4. Tax Breakdown Table
         int taxRowIndex = -1;
@@ -419,7 +608,8 @@ public class ExcelGenerator {
         if (taxRowIndex != -1) {
              Row sourceRow = sheet.getRow(taxRowIndex);
              Map<String, Integer> colMap = new HashMap<>();
-             for (Cell cell : sourceRow) {
+             for (Cell cell : sourceRow) { if (cell.getCellType() == CellType.STRING) { String kmapText = cell.getStringCellValue(); if (kmapText.contains("{{BY_TO}}")) colMap.put("{{BY_TO}}", cell.getColumnIndex()); if (kmapText.contains("{{DR_CR}}")) colMap.put("{{DR_CR}}", cell.getColumnIndex()); if (kmapText.contains("{{AMOUNT_DR_CR}}")) colMap.put("{{AMOUNT_DR_CR}}", cell.getColumnIndex()); if (kmapText.contains("{{BY_PARTICULARS}}")) colMap.put("{{BY_PARTICULARS}}", cell.getColumnIndex()); if (kmapText.contains("{{TO_PARTICULARS}}")) colMap.put("{{TO_PARTICULARS}}", cell.getColumnIndex()); if (kmapText.contains("{{TRANSACTION_MODE}}")) colMap.put("{{TRANSACTION_MODE}}", cell.getColumnIndex()); if (kmapText.contains("{{PAYMENT_MODE}}")) colMap.put("{{PAYMENT_MODE}}", cell.getColumnIndex()); }
+
                  if (cell.getCellType() == CellType.STRING) {
                      String text = cell.getStringCellValue();
                      if (text.contains("{{")) colMap.put(text, cell.getColumnIndex());
@@ -557,6 +747,15 @@ public class ExcelGenerator {
             try {
                  int panIdx = cursor.getColumnIndex("company_pan");
                  if (panIdx != -1) map.put("PAN", checkNull(cursor.getString(panIdx)));
+                 
+                 int cstIdx = cursor.getColumnIndex(DatabaseHelper.COLUMN_COMPANY_CST);
+                 if (cstIdx != -1) map.put("CST", checkNull(cursor.getString(cstIdx)));
+                 
+                 int tinIdx = cursor.getColumnIndex(DatabaseHelper.COLUMN_COMPANY_TIN);
+                 if (tinIdx != -1) map.put("TIN", checkNull(cursor.getString(tinIdx)));
+                 
+                 int vtinIdx = cursor.getColumnIndex(DatabaseHelper.COLUMN_COMPANY_VAT_TIN);
+                 if (vtinIdx != -1) map.put("VAT_TIN", checkNull(cursor.getString(vtinIdx)));
             } catch (Exception e) {}
             cursor.close();
         }
@@ -606,6 +805,7 @@ public class ExcelGenerator {
                 summary.taxableValue += item.getAmount();
                 summary.cgstAmount += item.getCgstAmount();
                 summary.sgstAmount += item.getSgstAmount();
+                summary.igstAmount += item.getIgstAmount();
                 summary.totalTax += (item.getCgstAmount() + item.getSgstAmount() + item.getIgstAmount());
                 totalTaxableValue += item.getAmount();
             }
@@ -640,20 +840,37 @@ public class ExcelGenerator {
                         // Default to split tax if not explicitly IGST
                         cCgst += amt / 2;
                         cSgst += amt / 2;
-                        rCgst = Math.max(rCgst, rate / 2);
-                        rSgst = Math.max(rSgst, rate / 2);
+                        if (rate > 0) {
+                             rCgst = Math.max(rCgst, rate / 2);
+                             rSgst = Math.max(rSgst, rate / 2);
+                        }
                     }
                 }
             }
             
             if (cIgst > 0 || cCgst > 0 || cSgst > 0 || cUtgst > 0) {
+                // Determine implicit rate if not provided in charges
+                if (rIgst == 0 && rCgst == 0 && rSgst == 0) {
+                     double totalTaxAmt = cIgst + cCgst + cSgst + cUtgst;
+                     double implicitRate = (totalTaxAmt / totalTaxableValue) * 100;
+                     if (igstMode) rIgst = implicitRate;
+                     else { rCgst = implicitRate / 2; rSgst = implicitRate / 2; }
+                }
+
+                // If map is empty (no items?), but totalTaxableValue > 0 implies items exist.
+                // If map has items with 0 tax, we update them.
+                
                 for (TaxSummary summary : map.values()) {
                     double ratio = summary.taxableValue / totalTaxableValue;
-                    summary.igstAmount = cIgst * ratio;
-                    summary.cgstAmount = cCgst * ratio;
-                    summary.sgstAmount = (cSgst + cUtgst) * ratio;
+                    if (igstMode) {
+                        summary.igstAmount += cIgst * ratio;
+                        summary.rate = Math.max(summary.rate, rIgst);
+                    } else {
+                        summary.cgstAmount += cCgst * ratio;
+                        summary.sgstAmount += (cSgst + cUtgst) * ratio;
+                        summary.rate = Math.max(summary.rate, rCgst + rSgst);
+                    }
                     summary.totalTax = summary.igstAmount + summary.cgstAmount + summary.sgstAmount;
-                    if (summary.rate == 0) summary.rate = rIgst + rCgst + rSgst + rUtgst;
                 }
             }
         }
@@ -749,15 +966,11 @@ public class ExcelGenerator {
                 Row row = sheet.createRow(rowNum++);
                 createCell(row, 0, String.valueOf(sl++), centerStyle);
                 
-                // We use InvoiceCharge as a proxy for VoucherCharge here
-                // Logic based on naming conventions or amount sign could work, 
-                // but let's assume chargeName contains Dr/Cr if possible or just use side logic.
-                // For Journal, we usually have a way to distinguish.
-                boolean isDr = charge.getChargeName().startsWith("By ");
-                String name = charge.getChargeName();
+                // Manually prefix for Manual Journal to match previous look
+                String prefix = charge.isDebit() ? "By " : "To ";
+                createCell(row, 1, prefix + charge.getChargeName(), dataStyle);
                 
-                createCell(row, 1, name, dataStyle);
-                if (isDr) {
+                if (charge.isDebit()) {
                     createCell(row, 2, String.format("%.2f", charge.getAmount()), rightStyle);
                     createCell(row, 3, "", dataStyle);
                     totalDr += charge.getAmount();
@@ -835,7 +1048,13 @@ public class ExcelGenerator {
 
         Row titleRow = sheet.createRow(rowNum++);
         Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("TAX INVOICE");
+        String title = "TAX INVOICE";
+        if ("Receipt".equalsIgnoreCase(invoice.getBuyersOrderNo())) title = "RECEIPT VOUCHER";
+        else if ("Payment".equalsIgnoreCase(invoice.getBuyersOrderNo())) title = "PAYMENT VOUCHER";
+        else if ("Contra".equalsIgnoreCase(invoice.getBuyersOrderNo())) title = "CONTRA VOUCHER";
+        else if ("Journal".equalsIgnoreCase(invoice.getBuyersOrderNo())) title = "JOURNAL VOUCHER";
+        
+        titleCell.setCellValue(title);
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6)); 
         rowNum++; 
 
@@ -853,7 +1072,7 @@ public class ExcelGenerator {
         for(int i=0; i<cols.length; i++) createCell(header, i, cols[i], headerStyle);
 
         double totalQty = 0;
-        if (invoice.getItems() != null) {
+        if (invoice.getItems() != null && !invoice.getItems().isEmpty()) {
             int sl = 1;
             for (InvoiceItem item : invoice.getItems()) {
                 Row row = sheet.createRow(rowNum++);
@@ -865,6 +1084,22 @@ public class ExcelGenerator {
                 createCell(row, 5, String.format("%.2f", item.getRate()), centerStyle);
                 createCell(row, 6, String.format("%.2f", item.getAmount()), centerStyle);
                 totalQty += item.getQuantity();
+            }
+        } else if (invoice.getExtraCharges() != null) {
+            int sl = 1;
+            for (InvoiceCharge charge : invoice.getExtraCharges()) {
+                Row row = sheet.createRow(rowNum++);
+                createCell(row, 0, String.valueOf(sl++), centerStyle);
+                
+                // Add By/To prefix for manual vouchers if it's a Dr/Cr type
+                String prefix = charge.isDebit() ? "By " : "To ";
+                createCell(row, 1, prefix + charge.getChargeName(), dataStyle);
+                
+                createCell(row, 2, "", centerStyle);
+                createCell(row, 3, "", centerStyle);
+                createCell(row, 4, "", centerStyle);
+                createCell(row, 5, "", centerStyle);
+                createCell(row, 6, String.format("%.2f", charge.getAmount()), centerStyle);
             }
         }
         
@@ -893,7 +1128,7 @@ public class ExcelGenerator {
         openExcel(file);
     }
     
-    private void openExcel(File file) {
+    public void openExcel(File file) {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
                 Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
@@ -905,5 +1140,18 @@ public class ExcelGenerator {
                 e.printStackTrace();
             }
         });
+    }
+
+    private String replaceKeyInsensitive(String source, String key, String replacement) {
+        if (source == null || key == null) return source;
+        String keyUpper = key.toUpperCase();
+        String sourceUpper = source.toUpperCase();
+        if (sourceUpper.contains(keyUpper)) {
+            // Find actual casing in source
+            int start = sourceUpper.indexOf(keyUpper);
+            String actualKey = source.substring(start, start + keyUpper.length());
+            return source.replace(actualKey, replacement != null ? replacement : "");
+        }
+        return source;
     }
 }

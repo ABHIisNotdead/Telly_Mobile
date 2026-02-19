@@ -279,7 +279,10 @@ public class MainPage extends BaseActivity {
         final EditText etPhone2 = view.findViewById(R.id.etCompanyPhone2);
         final EditText etEmail = view.findViewById(R.id.etCompanyEmail);
         final EditText etState = view.findViewById(R.id.etCompanyState);
-        final EditText etGST = view.findViewById(R.id.etCompanyGod); // Actually GST field ID
+        final EditText etGST = view.findViewById(R.id.etCompanyGst); // Fix Typo
+        final EditText etCst = view.findViewById(R.id.etCompanyCst);
+        final EditText etTin = view.findViewById(R.id.etCompanyTin);
+        final EditText etVatTin = view.findViewById(R.id.etCompanyVatTin);
         
         ivLogoPreview = view.findViewById(R.id.ivCompanyLogo);
         Button btnSelectLogo = view.findViewById(R.id.btnSelectLogo);
@@ -299,7 +302,10 @@ public class MainPage extends BaseActivity {
                     etState.getText().toString(),
                     selectedLogoUri != null ? selectedLogoUri.toString() : "",
                     etGST.getText().toString(),
-                    "" // Tagline
+                    "", // Tagline
+                    etCst.getText().toString(),
+                    etTin.getText().toString(),
+                    etVatTin.getText().toString()
                 );
                 
                 if (id != -1) {

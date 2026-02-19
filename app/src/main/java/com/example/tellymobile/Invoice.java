@@ -40,6 +40,12 @@ public class Invoice {
     private String buyerEmail;
     private String buyerMobile;
 
+    private String supplierInvDate;
+    private String supplierInvNo; // New
+    private String supplierCst;
+    private String supplierTin;
+    private String buyerVatTin;
+
     public Invoice(String invoiceNumber, String date, String customerName, List<InvoiceItem> items, double totalAmount, double deliveryCharges, double totalTaxAmount, double grandTotal) {
         this.invoiceNumber = invoiceNumber;
         this.date = date;
@@ -58,6 +64,11 @@ public class Invoice {
         this.dispatchThrough = dispatchThrough; this.destination = destination; this.termsOfDelivery = termsOfDelivery;
         this.billOfLading = billOfLading; this.motorVehicleNo = motorVehicleNo;
     }
+    
+    public void setBuyersOrderNo(String val) { this.buyersOrderNo = val; }
+    public void setDispatchThrough(String val) { this.dispatchThrough = val; }
+    public void setDeliveryNote(String val) { this.deliveryNote = val; }
+    public void setModeOfPayment(String val) { this.modeOfPayment = val; }
 
     public void setConsigneeDetails(String name, String address, String gst, String state, String email, String mobile) {
         this.consigneeName = name; this.consigneeAddress = address; this.consigneeGst = gst; this.consigneeState = state;
@@ -105,6 +116,17 @@ public class Invoice {
     public String getBuyerState() { return buyerState; }
     public String getBuyerEmail() { return buyerEmail; }
     public String getBuyerMobile() { return buyerMobile; }
+
+    public String getSupplierInvDate() { return supplierInvDate; }
+    public void setSupplierInvDate(String supplierInvDate) { this.supplierInvDate = supplierInvDate; }
+    public String getSupplierInvNo() { return supplierInvNo; }
+    public void setSupplierInvNo(String supplierInvNo) { this.supplierInvNo = supplierInvNo; }
+    public String getSupplierCst() { return supplierCst; }
+    public void setSupplierCst(String supplierCst) { this.supplierCst = supplierCst; }
+    public String getSupplierTin() { return supplierTin; }
+    public void setSupplierTin(String supplierTin) { this.supplierTin = supplierTin; }
+    public String getBuyerVatTin() { return buyerVatTin; }
+    public void setBuyerVatTin(String buyerVatTin) { this.buyerVatTin = buyerVatTin; }
     
     private int bankLedgerId = -1;
     public void setBankLedgerId(int id) { this.bankLedgerId = id; }

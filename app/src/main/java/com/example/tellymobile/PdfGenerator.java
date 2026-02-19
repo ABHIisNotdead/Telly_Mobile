@@ -111,10 +111,30 @@ public class PdfGenerator {
         }
 
         // Calculate Column Widths
-        List<Float> colWidths = new ArrayList<>();
         int maxCol = 0;
-        for(Row r : sheet) maxCol = Math.max(maxCol, r.getLastCellNum());
+        for (Row r : sheet) {
+            for (int cn = r.getLastCellNum() - 1; cn >= 0; cn--) {
+                Cell c = r.getCell(cn);
+                if (c != null) {
+                    boolean hasContent = c.getCellType() != CellType.BLANK;
+                    boolean hasBorder = false;
+                    CellStyle s = c.getCellStyle();
+                    if (s != null) {
+                        if (s.getBorderTop() != BorderStyle.NONE || s.getBorderBottom() != BorderStyle.NONE ||
+                            s.getBorderLeft() != BorderStyle.NONE || s.getBorderRight() != BorderStyle.NONE ||
+                            s.getFillPattern() != FillPatternType.NO_FILL) {
+                            hasBorder = true;
+                        }
+                    }
+                    if (hasContent || hasBorder) {
+                        maxCol = Math.max(maxCol, cn + 1);
+                        break; 
+                    }
+                }
+            }
+        }
         
+        List<Float> colWidths = new ArrayList<>();
         float totalExcelWidth = 0;
         for (int i = 0; i < maxCol; i++) {
             float w = sheet.getColumnWidth(i); 
@@ -292,11 +312,11 @@ public class PdfGenerator {
 
     private float getBorderWidth(BorderStyle style) {
         switch (style) {
-            case THIN: return 0.5f;
-            case MEDIUM: return 1.2f;
-            case THICK: return 2.0f;
-            case DOUBLE: return 1.5f;
-            default: return 0.5f;
+            case THIN: return 1.0f;
+            case MEDIUM: return 1.5f;
+            case THICK: return 2.5f;
+            case DOUBLE: return 2.0f;
+            default: return 1.0f;
         }
     }
     

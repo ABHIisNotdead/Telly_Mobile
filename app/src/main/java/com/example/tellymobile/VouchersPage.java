@@ -45,9 +45,19 @@ public class VouchersPage extends BaseActivity {
     }
     
     private void openVoucher(String type) {
-        Intent intent = new Intent(this, VoucherActivity.class);
-        intent.putExtra("MODE", "CREATE");
-        intent.putExtra("TYPE", type); // Check if VoucherActivity handles this Extra to pre-set spinner
-        startActivity(intent);
+        if ("Sales".equals(type)) {
+            Intent intent = new Intent(this, InvoiceActivity.class);
+            intent.putExtra("MODE", "CREATE");
+            startActivity(intent);
+        } else if ("Purchase".equals(type)) {
+            Intent intent = new Intent(this, PurchaseActivity.class);
+            intent.putExtra("MODE", "CREATE");
+            startActivity(intent);
+        } else {
+            Intent intent = new Intent(this, VoucherActivity.class);
+            intent.putExtra("MODE", "CREATE");
+            intent.putExtra("TYPE", type);
+            startActivity(intent);
+        }
     }
 }

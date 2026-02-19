@@ -134,9 +134,14 @@ public class DayBookPage extends BaseActivity {
                          intent.putExtra("MODE", "EDIT");
                          intent.putExtra("ID", voucher.id);
                          startActivity(intent);
+                    } else if (voucher.type.equals("Purchase")) {
+                         Intent intent = new Intent(DayBookPage.this, PurchaseActivity.class);
+                         intent.putExtra("MODE", "EDIT");
+                         intent.putExtra("ID", voucher.id);
+                         startActivity(intent);
                     } else {
                         Intent intent = new Intent(DayBookPage.this, VoucherActivity.class);
-                        intent.putExtra("MODE", "VIEW");
+                        intent.putExtra("MODE", "EDIT");
                         intent.putExtra("ID", voucher.id);
                         intent.putExtra("TYPE", voucher.type);
                         startActivity(intent);
@@ -150,9 +155,14 @@ public class DayBookPage extends BaseActivity {
                         intent.putExtra("MODE", "EDIT");
                         intent.putExtra("ID", voucher.id);
                         startActivity(intent);
+                    } else if (voucher.type.equals("Purchase")) {
+                         Intent intent = new Intent(DayBookPage.this, PurchaseActivity.class);
+                         intent.putExtra("MODE", "EDIT");
+                         intent.putExtra("ID", voucher.id);
+                         startActivity(intent);
                     } else {
                         Intent intent = new Intent(DayBookPage.this, VoucherActivity.class);
-                        intent.putExtra("MODE", "VIEW");
+                        intent.putExtra("MODE", "EDIT");
                         intent.putExtra("ID", voucher.id);
                         intent.putExtra("TYPE", voucher.type);
                         startActivity(intent);

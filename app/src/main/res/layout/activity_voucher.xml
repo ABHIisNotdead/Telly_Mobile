@@ -129,51 +129,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilPartyName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Party A/c Name"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/actvPartyName"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-            
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilBankLedger"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginHorizontal="8dp"
-                        android:layout_marginTop="8dp"
-                        android:hint="Select Bank (Optional)"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
-
-                        <AutoCompleteTextView
-                            android:id="@+id/actvBankLedger"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="none"
-                            android:focusable="false"/>
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Auto-filled Details -->
-                    <LinearLayout
-                        android:id="@+id/llPartyInfo"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="8dp"
-                        android:visibility="gone">
-                        
-                        <TextView android:id="@+id/tvPartyAddress" android:text="Address: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                        <TextView android:id="@+id/tvPartyMobile" android:text="Mobile: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                        <TextView android:id="@+id/tvPartyGst" android:text="GST: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                    </LinearLayout>
-
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -211,8 +166,70 @@
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilPartyName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Party A/c Name"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/actvPartyName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilBankLedger"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_marginTop="8dp"
+                        android:hint="Select Bank (Optional)"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/actvBankLedger"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:focusable="false"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Auto-filled Details -->
+                    <LinearLayout
+                        android:id="@+id/llPartyInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="8dp"
+                        android:visibility="gone">
+                        
+                        <TextView android:id="@+id/tvPartyAddress" android:text="Address: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        <TextView android:id="@+id/tvPartyMobile" android:text="Mobile: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                        <TextView android:id="@+id/tvPartyGst" android:text="GST: " android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                    </LinearLayout>
+
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDeliveryNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Delivery Note / Narration"
+                android:layout_marginBottom="16dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDeliveryNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine" 
+                    android:maxLines="3"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
              <!-- Dispatch Details Section -->
             <TextView
@@ -246,14 +263,7 @@
                         android:orientation="vertical"
                         android:visibility="gone">
                         
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="Delivery Note"
-                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etDeliveryNote" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-                        </com.google.android.material.textfield.TextInputLayout>
-                        
+
                          <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -552,37 +562,29 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_gravity="end"/>
 
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="?attr/colorOutline"
-                        android:layout_marginBottom="8dp"/>
-
-                    <LinearLayout
+                    <Button
+                        android:id="@+id/btnSave"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:weightSum="2"
-                        android:layout_marginTop="16dp">
+                        android:text="Save Voucher"
+                        android:layout_marginTop="16dp"
+                        style="@style/Widget.Material3.Button"/>
 
-                        <Button
-                            android:id="@+id/btnViewPdf"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="View PDF"
-                            android:layout_marginEnd="8dp"
-                            style="@style/Widget.Material3.Button.OutlinedButton"/>
+                    <Button
+                        android:id="@+id/btnViewPdf"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Print &amp; Share PDF"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginTop="8dp"/>
 
-                        <Button
-                            android:id="@+id/btnSave"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Save Voucher"
-                            android:layout_marginStart="8dp"
-                            style="@style/Widget.Material3.Button"/>
-                    </LinearLayout>
+                    <Button
+                        android:id="@+id/btnExcelShare"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Share Excel"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_marginTop="8dp"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
