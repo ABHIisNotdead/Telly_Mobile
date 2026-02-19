@@ -56,12 +56,21 @@
         <item name="android:statusBarColor">@color/night_primary_variant</item>
     </style>
     
-    <!-- Card Style -->
+    <!-- Modern Card Style -->
     <style name="DashboardCard" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/surface</item>
-        <item name="cardCornerRadius">12dp</item>
+        <item name="cardCornerRadius">24dp</item>
         <item name="cardElevation">4dp</item>
-        <item name="contentPadding">16dp</item>
+        <item name="contentPadding">20dp</item>
+        <item name="strokeColor">@color/premium_background</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <!-- Dashboard Grid Item Style -->
+    <style name="DashboardGridItem" parent="DashboardCard">
+        <item name="cardElevation">2dp</item>
+        <item name="contentPadding">12dp</item>
+        <item name="android:layout_margin">4dp</item>
     </style>
 
     <!-- Page Title Style -->
@@ -74,13 +83,14 @@
 
     <!-- Section Header Style -->
     <style name="SectionHeader">
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/primary</item>
-        <item name="android:layout_marginBottom">8dp</item>
-        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textColor">@color/premium_on_surface_variant</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:layout_marginTop">24dp</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.05</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:fontFamily">sans-serif-black</item>
     </style>
 
 </resources>

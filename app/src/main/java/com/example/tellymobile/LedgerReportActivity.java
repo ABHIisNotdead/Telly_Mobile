@@ -117,7 +117,7 @@ public class LedgerReportActivity extends AppCompatActivity {
             String endDateStr = etEndDate.getText().toString().trim();
             
             if (ledgerName.isEmpty()) {
-                Toast.makeText(this, "Please select a ledger", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, dbHelper, "Please select a ledger", true);
                 return;
             }
             
@@ -204,7 +204,7 @@ public class LedgerReportActivity extends AppCompatActivity {
             
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error generating report: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            NotificationUtils.showTopNotification(this, dbHelper, "Error generating report: " + e.getMessage(), true);
         }
     }
 }

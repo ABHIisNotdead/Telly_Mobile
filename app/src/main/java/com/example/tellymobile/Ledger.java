@@ -164,7 +164,7 @@ public class Ledger extends BaseActivity {
                 // Save to Database
                 if ("EDIT".equals(mode) && updateId != -1) {
                     myDB.updateLedger(updateId, name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, bankName, accNo, ifsc, branch);
-                    Toast.makeText(Ledger.this, "Ledger Updated Successfully!", Toast.LENGTH_SHORT).show();
+                    NotificationUtils.showTopNotification(Ledger.this, myDB, "Ledger Updated Successfully!", false);
                 } else {
                     myDB.addLedger(name, group, mobile, email, address, gst, balance, type, taxRate, isPercentage, bankName, accNo, ifsc, branch);
                     // Toast handled in addLedger but good to have consistency

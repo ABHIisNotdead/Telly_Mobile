@@ -120,7 +120,7 @@ public class VoucherActivity extends BaseActivity {
                         btnSave.setText("Update " + type);
                     }
                 } else {
-                     Toast.makeText(this, "Invalid Voucher Data", Toast.LENGTH_SHORT).show();
+                     NotificationUtils.showTopNotification(this, databaseHelper, "Invalid Voucher Data", true);
                 }
             } else {
                 // CREATE MODE - Check if TYPE was passed
@@ -137,7 +137,7 @@ public class VoucherActivity extends BaseActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error opening voucher: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Error opening voucher: " + e.getMessage(), true);
         }
     }
 
@@ -653,7 +653,7 @@ public class VoucherActivity extends BaseActivity {
                     .setPositiveButton("Yes", (dialog, which) -> {
                         if (type.equals("Journal")) databaseHelper.clearAllJournals(selectedCompanyId);
                         else databaseHelper.clearAllContras(selectedCompanyId);
-                        Toast.makeText(this, type + "s Cleared", Toast.LENGTH_SHORT).show();
+                        NotificationUtils.showTopNotification(this, databaseHelper, type + "s Cleared", false);
                         loadVoucherData(-1, type, false); // Reload to reset number and view
                     })
                     .setNegativeButton("No", null)
@@ -825,7 +825,7 @@ public class VoucherActivity extends BaseActivity {
         String hsn = etHsn.getText().toString();
 
         if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
-            Toast.makeText(this, "Please fill Item, Qty and Rate", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Please fill Item, Qty and Rate", true);
             return;
         }
 
@@ -1024,7 +1024,7 @@ public class VoucherActivity extends BaseActivity {
         String narration = etDeliveryNote.getText().toString().trim();
 
         if (voucherNo.isEmpty() || date.isEmpty()) {
-            Toast.makeText(this, "Number and Date are required", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Number and Date are required", true);
             return false;
         }
 
@@ -1037,7 +1037,7 @@ public class VoucherActivity extends BaseActivity {
             }
             
             if (chargesList.isEmpty()) {
-                Toast.makeText(this, "Empty Journal/Contra cannot be saved", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Empty Journal/Contra cannot be saved", true);
                 return false;
             }
             
@@ -1047,7 +1047,7 @@ public class VoucherActivity extends BaseActivity {
                 if (c.isDebit) tDr += c.amount; else tCr += c.amount;
             }
             if (Math.abs(tDr - tCr) > 0.01) {
-                Toast.makeText(this, "Voucher is Unbalanced: Dr " + String.format("%.2f", tDr) + " != Cr " + String.format("%.2f", tCr), Toast.LENGTH_LONG).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Voucher is Unbalanced: Dr " + String.format("%.2f", tDr) + " != Cr " + String.format("%.2f", tCr), true);
                 return false;
             }
         }
@@ -1061,7 +1061,7 @@ public class VoucherActivity extends BaseActivity {
         if (isEdit && editId != -1) {
              // UPDATE LOGIC
              if (type.equals("Sales")) {
-                 Toast.makeText(this, "Please use standard Invoice screen for editing Sales", Toast.LENGTH_SHORT).show();
+                 NotificationUtils.showTopNotification(this, databaseHelper, "Please use standard Invoice screen for editing Sales", true);
                  return false;
              } else if (type.equals("Purchase")) {
                   String supplierInvNo = etSupplierInvNo.getText().toString();
@@ -1082,7 +1082,7 @@ public class VoucherActivity extends BaseActivity {
              } else if (type.equals("Payment")) {
                  String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
-                     Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
+                     NotificationUtils.showTopNotification(this, databaseHelper, "Through Ledger is required", true);
                      return false;
                  }
                  // Mimic addPayment logic: append party name to narration if typical pattern
@@ -1092,7 +1092,7 @@ public class VoucherActivity extends BaseActivity {
              } else if (type.equals("Receipt")) {
                  String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
-                     Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
+                     NotificationUtils.showTopNotification(this, databaseHelper, "Through Ledger is required", true);
                      return false;
                  }
                  
@@ -1114,7 +1114,7 @@ public class VoucherActivity extends BaseActivity {
              // INSERT LOGIC
             if (type.equals("Sales")) {
                 if (partyName.isEmpty()) {
-                    Toast.makeText(this, "Party Name is required", Toast.LENGTH_SHORT).show();
+                    NotificationUtils.showTopNotification(this, databaseHelper, "Party Name is required", true);
                     return false;
                 }
                 double totalGst = 0;
@@ -1127,7 +1127,7 @@ public class VoucherActivity extends BaseActivity {
                 }
             } else if (type.equals("Purchase")) {
                  if (partyName.isEmpty()) {
-                    Toast.makeText(this, "Supplier Name is required", Toast.LENGTH_SHORT).show();
+                    NotificationUtils.showTopNotification(this, databaseHelper, "Supplier Name is required", true);
                     return false;
                 }
                 String supplierInvNo = etSupplierInvNo.getText().toString();
@@ -1146,7 +1146,7 @@ public class VoucherActivity extends BaseActivity {
             } else if (type.equals("Payment") || type.equals("Receipt")) {
                  String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
-                     Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
+                     NotificationUtils.showTopNotification(this, databaseHelper, "Through Ledger is required", true);
                      return false;
                  }
                  if (type.equals("Payment")) {
@@ -1168,12 +1168,12 @@ public class VoucherActivity extends BaseActivity {
                 databaseHelper.addVoucherCharge(voucherId, type, charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate, charge.isDebit, charge.paymentMode);
             }
             if (shouldFinish) {
-                Toast.makeText(this, isEdit ? type + " Updated Successfully" : type + " Saved Successfully", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, isEdit ? type + " Updated Successfully" : type + " Saved Successfully", false);
                 finish();
             }
             return true;
         } else {
-            Toast.makeText(this, "Failed to save " + type, Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Failed to save " + type, true);
             return false;
         }
     }
@@ -1209,7 +1209,7 @@ public class VoucherActivity extends BaseActivity {
             if (!name.isEmpty()) {
                 // Simplified creation - assumes other fields optional/default
                 databaseHelper.addLedger(name, group, "", "", "", "", 0, "", 0, false, "", "", "", "");
-                Toast.makeText(this, "Ledger Created", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Ledger Created", false);
                 // Re-open Add Charge dialog to use it immediately
                 showAddChargeDialog(); 
             }
@@ -1281,7 +1281,7 @@ public class VoucherActivity extends BaseActivity {
         String partyName = actvPartyName.getText().toString();
         String type = spnVoucherType.getSelectedItem().toString();
         if (amountStr.isEmpty() || partyName.isEmpty()) {
-            Toast.makeText(this, "Enter Party and Amount", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Enter Party and Amount", true);
             return;
         }
         double amt = Double.parseDouble(amountStr);
@@ -1306,7 +1306,7 @@ public class VoucherActivity extends BaseActivity {
             if (inv != null) {
                 new PdfGenerator(this).generateAndOpenPdf(inv);
             } else {
-                Toast.makeText(this, "Failed to generate PDF data.", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Failed to generate PDF data.", true);
             }
         }
     }
@@ -1317,7 +1317,7 @@ public class VoucherActivity extends BaseActivity {
             if (inv != null) {
                 new ExcelGenerator(this).generateAndOpenExcel(inv);
             } else {
-                Toast.makeText(this, "Failed to generate Excel data.", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Failed to generate Excel data.", true);
             }
         }
     }
@@ -1327,7 +1327,7 @@ public class VoucherActivity extends BaseActivity {
         String voucherNo = etVoucherNo.getText().toString();
         
         if (voucherNo.isEmpty()) {
-            Toast.makeText(this, "No Voucher Data to Generate", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "No Voucher Data to Generate", true);
             return null;
         }
         
@@ -1463,7 +1463,7 @@ public class VoucherActivity extends BaseActivity {
                  inv.setExtraCharges(chList);
                  return inv;
              } else {
-                 Toast.makeText(this, "Debug: Journal not found in DB", Toast.LENGTH_SHORT).show();
+                 NotificationUtils.showTopNotification(this, databaseHelper, "Debug: Journal not found in DB", true);
              }
         }
 
@@ -1491,7 +1491,7 @@ public class VoucherActivity extends BaseActivity {
             btnSave.setVisibility(View.GONE);
             btnViewPdf.setVisibility(View.VISIBLE);
         } else {
-             Toast.makeText(this, "Excel generation available for Sales, Purchase, Payment, Receipt, Journal and Contra", Toast.LENGTH_SHORT).show();
+             NotificationUtils.showTopNotification(this, databaseHelper, "Excel generation available for Sales, Purchase, Payment, Receipt, Journal and Contra", false);
         }
     }
 

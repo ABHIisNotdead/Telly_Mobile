@@ -1,0 +1,110 @@
+# TellyMobile Core Logic Documentation (Stripped-Down Version)
+
+This document consolidates the absolute core logic of the TellyMobile application, focusing on high-level architecture, database operations, transaction handling, and reporting.
+
+---
+
+## 1. ARCHITECTURAL OVERVIEW
+*   **Platform**: Android (Java)
+*   **Database**: SQLite (via `DatabaseHelper.java`)
+*   **Patterns**: Activity-based UI, Repository-like Database Layer, POJO Models.
+*   **Key Modules**: 
+    1. **Master Management**: Ledgers, Items, Groups.
+    2. **Voucher System**: Sales, Purchase, Payment, Receipt, Journal, Contra.
+    3. **Reporting**: Daybook, Trial Balance, Ledger Statements.
+    4. **Export Engine**: Excel template processing and PDF rendering.
+
+---
+
+## 2. CORE DATABASE SCHEMA (`DatabaseHelper.java`)
+Absolute essential tables and columns:
+
+| Table | Core Columns |
+| :--- | :--- |
+| **ledgers** | `_id`, `name`, `group_name`, `balance`, `type` (Dr/Cr), `company_id` |
+| **items** | `_id`, `item_name`, `rate`, `stock`, `gst_rate`, `company_id` |
+| **invoices** | `_id`, `invoice_number`, `date`, `customer_name`, `grand_total`, `company_id` |
+| **receipts** | `_id`, `receipt_no`, `date`, `through_ledger`, `total_amount`, `company_id` |
+| **invoice_items** | `_id`, `invoice_id` (FK), `item_name`, `quantity`, `rate`, `amount`, `cgst`, `sgst` |
+| **voucher_charges**| `_id`, `voucher_id` (FK), `ledger_name`, `amount`, `is_debit` (1=Dr, 0=Cr) |
+
+---
+
+## 3. CORE TRANSACTION ENGINE (`VoucherActivity.java`)
+The universal method to save any transaction type:
+
+```java
+private boolean saveVoucher() {
+    String type = spnVoucherType.getSelectedItem().toString();
+    long voucherId = -1;
+
+    // 1. SAVE HEADER (to appropriate table)
+    if (type.equals("Sales")) {
+        voucherId = db.addVoucher(vNo, date, party, sub, tax, chg, type, compId);
+    } else if (type.equals("Payment") || type.equals("Receipt")) {
+        voucherId = (type.equals("Payment")) ? 
+            db.addPayment(vNo, date, party, amt, through, narr, compId) :
+            db.addReceipt(vNo, date, narr, through, amt, compId, mode);
+    }
+
+    // 2. SAVE LINE ITEMS (Inventory-based)
+    if (voucherId != -1 && (type.equals("Sales") || type.equals("Purchase"))) {
+        for (InvoiceItem item : itemList) {
+            db.addVoucherItem(voucherId, type, item.name, item.qty, item.rate, item.amt...);
+            db.updateStock(item.name, type.equals("Sales") ? -item.qty : item.qty);
+        }
+    }
+
+    // 3. SAVE CHARGES / ACCOUNT POSTINGS
+    for (VoucherCharge charge : chargesList) {
+        db.addVoucherCharge(voucherId, type, charge.ledgerId, charge.name, charge.amt, ..., charge.isDebit);
+    }
+
+    return voucherId != -1;
+}
+```
+
+---
+
+## 4. REPORTING & BALANCING LOGIC
+Calculation engine for Trial Balance and Ledger status:
+
+```java
+public double getLedgerBalance(String name, int compId) {
+    double bal = getOpeningBalance(name, compId); // Base value from 'ledgers' table
+
+    // ADD DEBITS
+    bal += (db.sum("total_amount", "invoices", "customer_name", name)); // Sales
+    bal += (db.sum("amount", "voucher_charges", "ledger_name", name, "is_debit", 1)); // Journal Dr
+
+    // SUBTRACT CREDITS
+    bal -= (db.sum("total_amount", "receipts", "through_ledger", name)); // Bank Receipts
+    bal -= (db.sum("amount", "voucher_charges", "ledger_name", name, "is_debit", 0)); // Journal Cr
+
+    return bal;
+}
+```
+
+---
+
+## 5. DOCUMENT GENERATION CORE
+The app uses **Apache POI** to manipulate Excel templates.
+
+### High-Level Logic (`ExcelGenerator.java`):
+1. **Load Template**: Open `assets/invoice_template.xlsx`.
+2. **Search and Replace**: Scan cells for tags like `{{customer_name}}`, `{{invoice_no}}`.
+3. **Iterate Items**: Find the "Item Table" start row and insert new rows for each `InvoiceItem`.
+4. **Calculate Taxes**: Group items by HSN/GST-rate to build the tax summary table at the bottom.
+5. **Convert to Words**: Utility function to convert `total_amount` to words (e.g., "Five Hundred Only").
+
+---
+
+## 6. ESSENTIAL MODELS
+*   **Invoice.java**: Container for header, items, and charges list.
+*   **Ledger.java**: Data structure for account details and current balance.
+*   **InvoiceItem.java**: Stores HSN, Quantity, Rate, and computed CGST/SGST.
+
+---
+
+### SUMMARY
+The TellyMobile core is a **Relational Accounting Engine** that maps dynamic UI inputs into a structured SQLite database, ensuring that every transaction can be traced, balanced, and exported to standard document formats.

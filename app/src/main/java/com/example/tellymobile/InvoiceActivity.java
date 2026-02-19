@@ -579,7 +579,7 @@ public class InvoiceActivity extends BaseActivity {
         String unit = etUnit.getText().toString();
 
         if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
-            Toast.makeText(this, "Please fill all item details", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Please fill all item details", true);
             return;
         }
 
@@ -687,7 +687,7 @@ public class InvoiceActivity extends BaseActivity {
         String customer = spnCustomer.getSelectedItem() != null ? spnCustomer.getSelectedItem().toString() : "";
 
         if (invoiceNo.isEmpty() || date.isEmpty() || customer.isEmpty() || invoiceItemList.isEmpty()) {
-            Toast.makeText(this, "Please fill invoice details and add items", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Please fill invoice details and add items", true);
             return false;
         }
         
@@ -720,7 +720,7 @@ public class InvoiceActivity extends BaseActivity {
                 databaseHelper.addVoucherCharge(updateId, "Sales", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
             }
             
-            Toast.makeText(this, "Invoice Updated Successfully!", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Invoice Updated Successfully!", false);
             savedInvoiceId = updateId;
         } else {
             // Create New
@@ -737,9 +737,9 @@ public class InvoiceActivity extends BaseActivity {
                     databaseHelper.addVoucherCharge(savedInvoiceId, "Sales", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
                 }
                 
-                Toast.makeText(this, "Invoice Saved Successfully!", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Invoice Saved Successfully!", false);
             } else {
-                 Toast.makeText(this, "Failed to save invoice", Toast.LENGTH_SHORT).show();
+                 NotificationUtils.showTopNotification(this, databaseHelper, "Failed to save invoice", true);
                  return false;
             }
         }

@@ -108,9 +108,9 @@ public class MainPage extends BaseActivity {
                 }
             }
             if (allGranted) {
-                Toast.makeText(this, "Permissions Granted", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, dbHelper, "Permissions Granted", false);
             } else {
-                Toast.makeText(this, "Permissions Denied. Some features (Backup, Excel) may not work.", Toast.LENGTH_LONG).show();
+                NotificationUtils.showTopNotification(this, dbHelper, "Permissions Denied. Some features may not work.", true);
             }
         });
 
@@ -164,58 +164,19 @@ public class MainPage extends BaseActivity {
             return insets;
         });
 
-        Button CreateButton = findViewById(R.id.btnCreateMaster);
-        CreateButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainPage.this, CreatePage.class);
-                startActivity(intent);
-            }
-        });
+        // Masters Section
+        findViewById(R.id.btnCreateMaster).setOnClickListener(v -> startActivity(new Intent(MainPage.this, CreatePage.class)));
+        findViewById(R.id.btnAlterMaster).setOnClickListener(v -> startActivity(new Intent(MainPage.this, AlterPage.class)));
+        findViewById(R.id.btnChartOfAC).setOnClickListener(v -> startActivity(new Intent(MainPage.this, ChartOfAccPage.class)));
 
+        // Transactions / Fast Actions
+        findViewById(R.id.cardVoucherEntry).setOnClickListener(v -> startActivity(new Intent(MainPage.this, VoucherActivity.class)));
+        findViewById(R.id.cardDayBook).setOnClickListener(v -> startActivity(new Intent(MainPage.this, DayBookPage.class)));
+        findViewById(R.id.cardVouchers).setOnClickListener(v -> startActivity(new Intent(MainPage.this, VouchersPage.class)));
 
-        Button AlterButton = findViewById(R.id.btnAlterMaster);
-        AlterButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainPage.this, AlterPage.class);
-                startActivity(intent);
-            }
-        });
-
-        Button VoucherButton = findViewById(R.id.btnVouchers);
-        VoucherButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainPage.this, VouchersPage.class);
-                startActivity(intent);
-            }
-        });
-
-        Button ChartButton = findViewById(R.id.btnChartOfAC);
-        ChartButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainPage.this, ChartOfAccPage.class);
-                startActivity(intent);
-            }
-        });
-
-        Button DaybookButton = findViewById(R.id.btnDayBook);
-        DaybookButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainPage.this, DayBookPage.class);
-                startActivity(intent);
-            }
-        });
-
-        Button voucherButton = findViewById(R.id.btnVoucherEntry);
-        voucherButton.setOnClickListener(v -> startActivity(new Intent(MainPage.this, VoucherActivity.class)));
-        
-        Button ReportsButton = findViewById(R.id.btnSalesReports);
-        ReportsButton.setOnClickListener(v -> startActivity(new Intent(MainPage.this, ReportsActivity.class)));
-        
+        // Reports Section
+        findViewById(R.id.cardSalesReports).setOnClickListener(v -> startActivity(new Intent(MainPage.this, ReportsActivity.class)));
+        findViewById(R.id.cardInventoryStock).setOnClickListener(v -> startActivity(new Intent(MainPage.this, InventoryReportActivity.class)));
     }
 
     @Override
@@ -243,6 +204,20 @@ public class MainPage extends BaseActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onMenuOpened(int featureId, android.view.Menu menu) {
+        if (menu != null && menu.getClass().getSimpleName().equals("MenuBuilder")) {
+            try {
+                java.lang.reflect.Method m = menu.getClass().getDeclaredMethod("setOptionalIconsVisible", Boolean.TYPE);
+                m.setAccessible(true);
+                m.invoke(menu, true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return super.onMenuOpened(featureId, menu);
     }
 
     private void showThemeSelectionDialog() {
@@ -287,7 +262,7 @@ public class MainPage extends BaseActivity {
         androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvCompanyList);
         rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
         
-        CompanyAdapter adapter = new CompanyAdapter(displayList, company -> {
+         CompanyAdapter adapter = new CompanyAdapter(displayList, company -> {
             // On Company Select
              getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit()
@@ -295,7 +270,7 @@ public class MainPage extends BaseActivity {
                     .apply();
              updateToolbarTitle();
              dialog.dismiss();
-             android.widget.Toast.makeText(MainPage.this, "Switched to: " + company.name, android.widget.Toast.LENGTH_SHORT).show();
+             NotificationUtils.showTopNotification(MainPage.this, dbHelper, "Switched to: " + company.name, false);
              // Ideally refresh dashboard data here
         });
         rv.setAdapter(adapter);

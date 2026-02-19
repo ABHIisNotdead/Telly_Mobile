@@ -18,7 +18,7 @@ import java.util.List;
 
 public class ItemActivity extends BaseActivity {
 
-    private TextInputEditText etName, etHsn, etRate, etStock, etGstValue;
+    private TextInputEditText etName, etHsn, etRate, etStock, etGstValue, etCostPrice, etLowStockLimit;
     private AutoCompleteTextView actvUnit, actvGstType;
     private android.widget.Spinner spnStockGroup, spnStockCategory;
     private Button btnSave;
@@ -69,6 +69,12 @@ public class ItemActivity extends BaseActivity {
             setSpinnerSelection(spnStockGroup, cursor, "stock_group");
             setSpinnerSelection(spnStockCategory, cursor, "stock_category");
             
+            // Cost and Low Stock
+            int costIdx = cursor.getColumnIndex("cost_price");
+            if (costIdx != -1) etCostPrice.setText(String.valueOf(cursor.getDouble(costIdx)));
+            int lowLimitIdx = cursor.getColumnIndex("low_stock_limit");
+            if (lowLimitIdx != -1) etLowStockLimit.setText(String.valueOf(cursor.getDouble(lowLimitIdx)));
+            
             cursor.close();
         }
     }
@@ -107,6 +113,8 @@ public class ItemActivity extends BaseActivity {
         etStock = findViewById(R.id.etStock);
         etGstValue = findViewById(R.id.etGstValue);
         actvGstType = findViewById(R.id.actvGstType);
+        etCostPrice = findViewById(R.id.etCostPrice);
+        etLowStockLimit = findViewById(R.id.etLowStockLimit);
         btnSave = findViewById(R.id.btnSave);
         
         setupUnitAdapter();
@@ -218,7 +226,7 @@ public class ItemActivity extends BaseActivity {
         String gstType = actvGstType.getText().toString().trim();
 
         if (name.isEmpty()) {
-            Toast.makeText(this, "Item Name is required", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Item Name is required", true);
             return;
         }
         
@@ -230,13 +238,17 @@ public class ItemActivity extends BaseActivity {
         double rate = rateStr.isEmpty() ? 0.0 : Double.parseDouble(rateStr);
         double stock = stockStr.isEmpty() ? 0.0 : Double.parseDouble(stockStr);
         double gstVal = gstValStr.isEmpty() ? 0.0 : Double.parseDouble(gstValStr);
+        double cost = etCostPrice.getText().toString().isEmpty() ? 0.0 : Double.parseDouble(etCostPrice.getText().toString());
+        double lowStockLimit = etLowStockLimit.getText().toString().isEmpty() ? 0.0 : Double.parseDouble(etLowStockLimit.getText().toString());
+
+        int selectedCompanyId = getSharedPreferences("TellyPrefs", MODE_PRIVATE).getInt("selected_company_id", -1);
 
         if ("EDIT".equals(mode) && updateId != -1) {
-            databaseHelper.updateItem(updateId, name, rate, unit, stock, hsn, group, category, gstVal, gstType);
-            Toast.makeText(this, "Item Updated Successfully", Toast.LENGTH_SHORT).show();
+            databaseHelper.updateItem(updateId, name, rate, unit, stock, hsn, group, category, gstVal, gstType, cost, lowStockLimit, selectedCompanyId);
+            NotificationUtils.showTopNotification(this, databaseHelper, "Item Updated Successfully", false);
         } else {
-            databaseHelper.addItem(name, rate, unit, stock, hsn, group, category, gstVal, gstType);
-            Toast.makeText(this, "Item Saved Successfully", Toast.LENGTH_SHORT).show();
+            databaseHelper.addItem(name, rate, unit, stock, hsn, group, category, gstVal, gstType, cost, lowStockLimit, selectedCompanyId);
+            NotificationUtils.showTopNotification(this, databaseHelper, "Item Saved Successfully", false);
         }
         finish();
     }

@@ -74,10 +74,10 @@ public class StockGroupActivity extends BaseActivity {
 
         if ("EDIT".equals(mode) && updateId != -1) {
             databaseHelper.updateStockGroup(updateId, name, "Primary");
-            Toast.makeText(this, "Stock Group Updated", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Stock Group Updated", false);
         } else {
             databaseHelper.addStockGroup(name, "Primary");
-            Toast.makeText(this, "Stock Group Saved Successfully", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Stock Group Saved Successfully", false);
         }
         finish();
     }

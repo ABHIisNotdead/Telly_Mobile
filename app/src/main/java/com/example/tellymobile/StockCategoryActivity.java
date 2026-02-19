@@ -73,11 +73,11 @@ public class StockCategoryActivity extends BaseActivity {
         }
 
         if ("EDIT".equals(mode) && updateId != -1) {
-            databaseHelper.updateStockCategory(updateId, name, "Primary");
-             Toast.makeText(this, "Category Updated", Toast.LENGTH_SHORT).show();
+             databaseHelper.updateStockCategory(updateId, name, "Primary");
+             NotificationUtils.showTopNotification(this, databaseHelper, "Category Updated", false);
         } else {
             databaseHelper.addStockCategory(name, "Primary");
-            Toast.makeText(this, "Category Saved Successfully", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Category Saved Successfully", false);
         }
         finish();
     }

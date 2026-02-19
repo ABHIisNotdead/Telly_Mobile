@@ -100,10 +100,10 @@ public class GroupActivity extends BaseActivity {
 
         if ("EDIT".equals(mode) && updateId != -1) {
             databaseHelper.updateLedgerGroup(updateId, name, primary);
-             Toast.makeText(this, "Group Updated Successfully", Toast.LENGTH_SHORT).show();
+             NotificationUtils.showTopNotification(this, databaseHelper, "Group Updated Successfully", false);
         } else {
             databaseHelper.addLedgerGroup(name, primary);
-            Toast.makeText(this, "Group Saved Successfully", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Group Saved Successfully", false);
         }
         finish();
     }

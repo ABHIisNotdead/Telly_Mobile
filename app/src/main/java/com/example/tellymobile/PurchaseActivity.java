@@ -229,7 +229,7 @@ public class PurchaseActivity extends BaseActivity {
         String rateStr = etRate.getText().toString();
 
         if (name.isEmpty() || qtyStr.isEmpty() || rateStr.isEmpty()) {
-            Toast.makeText(this, "Please fill all item details", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Please fill all item details", true);
             return;
         }
 
@@ -360,7 +360,7 @@ public class PurchaseActivity extends BaseActivity {
         String buyerVatTin = etBuyerVatTin.getText().toString();
 
         if (invoiceNo.isEmpty() || date.isEmpty() || supplier.isEmpty() || purchaseItemList.isEmpty()) {
-            Toast.makeText(this, "Please fill purchase details and add items", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "Please fill purchase details and add items", true);
             return false;
         }
 
@@ -384,7 +384,7 @@ public class PurchaseActivity extends BaseActivity {
                  databaseHelper.addVoucherCharge(updateId, "Purchase", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
              }
              
-             Toast.makeText(this, "Purchase Updated Successfully!", Toast.LENGTH_SHORT).show();
+             NotificationUtils.showTopNotification(this, databaseHelper, "Purchase Updated Successfully!", false);
         } else {
             long savedId = databaseHelper.addPurchase(invoiceNo, date, supplierInvDate, supplierInvNo, supplier, supplierCst, supplierTin, buyerVatTin, totalAmount, companyId);
             if (savedId != -1) {
@@ -395,10 +395,10 @@ public class PurchaseActivity extends BaseActivity {
                     databaseHelper.addVoucherCharge(savedId, "Purchase", charge.ledgerId, charge.ledgerName, charge.amount, charge.isPercentage, charge.rate);
                 }
                 
-                Toast.makeText(this, "Purchase Saved & Stock Updated!", Toast.LENGTH_LONG).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Purchase Saved & Stock Updated!", false);
                 updateId = savedId;
             } else {
-                Toast.makeText(this, "Failed to save purchase", Toast.LENGTH_SHORT).show();
+                NotificationUtils.showTopNotification(this, databaseHelper, "Failed to save purchase", true);
                 return false;
             }
         }

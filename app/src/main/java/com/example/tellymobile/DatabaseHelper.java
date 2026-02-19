@@ -18,7 +18,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private Context context;
     private static final String DATABASE_NAME = "TellyMobile.db";
-    private static final int DATABASE_VERSION = 36; // Added Safety Checks for Reporting Columns
+    private static final int DATABASE_VERSION = 37; // Added Item Cost and Low Stock Limit
 
 
     // ...
@@ -164,6 +164,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_ITEM_CATEGORY = "category";
     public static final String COLUMN_ITEM_GST_RATE = "gst_rate"; // Added
     public static final String COLUMN_ITEM_GST_TYPE = "gst_type"; // Added (Percentage/Amount)
+    public static final String COLUMN_ITEM_COST = "cost_price"; // New
+    public static final String COLUMN_ITEM_LOW_STOCK_LIMIT = "low_stock_limit"; // New
 
     // Purchases Table
     public static final String TABLE_PURCHASES = "purchases";
@@ -357,6 +359,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_ITEM_CATEGORY + " TEXT, " +
                 COLUMN_ITEM_GST_RATE + " REAL DEFAULT 0, " +
                 COLUMN_ITEM_GST_TYPE + " TEXT DEFAULT 'Percentage', " +
+                COLUMN_ITEM_COST + " REAL DEFAULT 0, " +
+                COLUMN_ITEM_LOW_STOCK_LIMIT + " REAL DEFAULT 0, " +
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);"; 
         db.execSQL(queryItems);
 
@@ -903,6 +907,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                  e.printStackTrace();
              }
         }
+        if (oldVersion < 37 && newVersion >= 37) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_ITEM_COST + " REAL DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TABLE_ITEMS + " ADD COLUMN " + COLUMN_ITEM_LOW_STOCK_LIMIT + " REAL DEFAULT 0");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 
@@ -1015,7 +1027,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 
 
-    public void addItem(String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType) {
+    public void addItem(String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType, double cost, double lowStockLimit, int companyId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_ITEM_NAME, name);
@@ -1025,9 +1037,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_ITEM_HSN, hsn);
         cv.put(COLUMN_ITEM_GROUP, group);
         cv.put(COLUMN_ITEM_CATEGORY, category);
-        cv.put(COLUMN_ITEM_GST_RATE, gstRate); // Added
-        cv.put(COLUMN_ITEM_GST_TYPE, gstType); // Added
+        cv.put(COLUMN_ITEM_GST_RATE, gstRate);
+        cv.put(COLUMN_ITEM_GST_TYPE, gstType);
+        cv.put(COLUMN_ITEM_COST, cost);
+        cv.put(COLUMN_ITEM_LOW_STOCK_LIMIT, lowStockLimit);
+        cv.put(COLUMN_COMPANY_ID, companyId);
         db.insert(TABLE_ITEMS, null, cv);
+    }
+
+    public void addItem(String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType, double cost, double lowStockLimit) {
+        addItem(name, rate, unit, stock, hsn, group, category, gstRate, gstType, cost, lowStockLimit, 0);
+    }
+
+    public void addItem(String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType) {
+        addItem(name, rate, unit, stock, hsn, group, category, gstRate, gstType, 0.0, 0.0);
     }
 
     // Legacy overload
@@ -1035,7 +1058,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         addItem(name, rate, unit, stock, hsn, group, category, 0.0, "Percentage");
     }
     
-    public void updateItem(int id, String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType) {
+    public void updateItem(int id, String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType, double cost, double lowStockLimit, int companyId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(COLUMN_ITEM_NAME, name);
@@ -1045,9 +1068,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_ITEM_HSN, hsn);
         cv.put(COLUMN_ITEM_GROUP, group);
         cv.put(COLUMN_ITEM_CATEGORY, category);
-        cv.put(COLUMN_ITEM_GST_RATE, gstRate); // Added
-        cv.put(COLUMN_ITEM_GST_TYPE, gstType); // Added
+        cv.put(COLUMN_ITEM_GST_RATE, gstRate);
+        cv.put(COLUMN_ITEM_GST_TYPE, gstType);
+        cv.put(COLUMN_ITEM_COST, cost);
+        cv.put(COLUMN_ITEM_LOW_STOCK_LIMIT, lowStockLimit);
+        cv.put(COLUMN_COMPANY_ID, companyId);
         db.update(TABLE_ITEMS, cv, COLUMN_ITEM_ID + "=?", new String[]{String.valueOf(id)});
+    }
+
+    public void updateItem(int id, String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType, double cost, double lowStockLimit) {
+        updateItem(id, name, rate, unit, stock, hsn, group, category, gstRate, gstType, cost, lowStockLimit, 0);
+    }
+
+    public void updateItem(int id, String name, double rate, String unit, double stock, String hsn, String group, String category, double gstRate, String gstType) {
+        updateItem(id, name, rate, unit, stock, hsn, group, category, gstRate, gstType, 0.0, 0.0);
     }
 
     // Legacy overload
@@ -1064,7 +1098,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                        COLUMN_ITEM_HSN + " as hsn_sac, " +
                        COLUMN_ITEM_GROUP + " as stock_group, " + 
                        COLUMN_ITEM_CATEGORY + " as stock_category, " +
-                       COLUMN_ITEM_GST_RATE + ", " + COLUMN_ITEM_GST_TYPE +
+                        COLUMN_ITEM_GST_RATE + ", " + COLUMN_ITEM_GST_TYPE + ", " +
+                       COLUMN_ITEM_COST + ", " + COLUMN_ITEM_LOW_STOCK_LIMIT +
                        " FROM " + TABLE_ITEMS + " WHERE " + COLUMN_ITEM_ID + "=?";
         return db.rawQuery(query, new String[]{String.valueOf(id)});
     }
@@ -1346,6 +1381,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         
     // Increase Stock for Purchases
         updateStock(itemName, qty);
+
+    // Update Item Cost Price to the latest purchase rate
+        try {
+            ContentValues itemCv = new ContentValues();
+            itemCv.put(COLUMN_ITEM_COST, rate);
+            db.update(TABLE_ITEMS, itemCv, COLUMN_ITEM_NAME + "=?", new String[]{itemName});
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     public void updatePurchase(long id, String invoiceNo, String date, String supplierInvDate, String supplierInvNo, String supplierName, String supplierCst, String supplierTin, String buyerVatTin, double totalAmount) {

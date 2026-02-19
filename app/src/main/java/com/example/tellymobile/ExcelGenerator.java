@@ -7,6 +7,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
+import android.app.Activity;
 
 import androidx.core.content.FileProvider;
 
@@ -66,10 +67,16 @@ public class ExcelGenerator {
         }
     }
 
-    private void showToast(final String message) {
-        new Handler(Looper.getMainLooper()).post(() -> 
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        );
+    private void showNotification(final String message, final boolean isError) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            DatabaseHelper db = new DatabaseHelper(context);
+            if (context instanceof Activity) {
+                NotificationUtils.showTopNotification((Activity) context, db, message, isError);
+            } else {
+                db.addNotification(isError ? "Error" : "Success", message, isError ? "Error" : "Success");
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     public void generateAndOpenExcel(Invoice invoice) {
@@ -81,9 +88,9 @@ public class ExcelGenerator {
                 e.printStackTrace();
                 String msg = e.getMessage();
                 if (msg != null && msg.contains("used by another process")) {
-                    showToast("Error: Excel file is open in another app. Please close Excel and try again.");
+                    showNotification("Error: Excel file is open in another app. Please close Excel and try again.", true);
                 } else {
-                    showToast("Error generating Excel: " + e.getMessage());
+                    showNotification("Error generating Excel: " + e.getMessage(), true);
                 }
             }
         }).start();
@@ -1124,7 +1131,7 @@ public class ExcelGenerator {
         workbook.write(fos);
         workbook.close();
         fos.close();
-        showToast("Excel Saved: " + file.getAbsolutePath());
+        showNotification("Excel Saved: " + file.getAbsolutePath(), false);
         openExcel(file);
     }
     
@@ -1147,7 +1154,7 @@ public class ExcelGenerator {
                 context.startActivity(chooser);
             } catch (Exception e) {
                 e.printStackTrace();
-                Toast.makeText(context, "No app found to open Excel", Toast.LENGTH_SHORT).show();
+                showNotification("No app found to open Excel", true);
             }
         });
     }

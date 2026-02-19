@@ -60,7 +60,7 @@ public class TrialBalanceActivity extends AppCompatActivity {
             tvTotalCredit.setText(String.format(Locale.getDefault(), "%.2f", totalCr));
         } catch (Exception e) {
             e.printStackTrace();
-            android.widget.Toast.makeText(this, "Error loading Trial Balance: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+            NotificationUtils.showTopNotification(this, dbHelper, "Error loading Trial Balance: " + e.getMessage(), true);
         }
     }
 }

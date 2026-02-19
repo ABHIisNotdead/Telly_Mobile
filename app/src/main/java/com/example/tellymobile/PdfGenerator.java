@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 import android.widget.Toast;
+import android.app.Activity;
 
 import androidx.core.content.FileProvider;
 
@@ -45,9 +46,15 @@ public class PdfGenerator {
         this.context = context;
     }
     
-    private void showToast(final String message) {
+    private void showNotification(final String message, final boolean isError) {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            DatabaseHelper db = new DatabaseHelper(context);
+            if (context instanceof Activity) {
+                NotificationUtils.showTopNotification((Activity) context, db, message, isError);
+            } else {
+                db.addNotification(isError ? "Error" : "Success", message, isError ? "Error" : "Success");
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -72,12 +79,12 @@ public class PdfGenerator {
                 workbook.close();
                 
                 // 5. Open
-                showToast("PDF Saved: " + file.getAbsolutePath());
+                showNotification("PDF Saved: " + file.getAbsolutePath(), false);
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> openPdf(file));
 
             } catch (Exception e) {
                 e.printStackTrace();
-                showToast("Error generating PDF: " + e.getMessage());
+                showNotification("Error generating PDF: " + e.getMessage(), true);
                 Log.e(TAG, "Error generating PDF", e);
             }
         }).start();
@@ -348,11 +355,11 @@ public class PdfGenerator {
             try {
                 context.startActivity(chooser);
             } catch (android.content.ActivityNotFoundException ex) {
-                showToast("No app found to open PDF");
+                showNotification("No app found to open PDF", true);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            showToast("Error opening PDF");
+            showNotification("Error opening PDF", true);
         }
     }
 }

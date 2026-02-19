@@ -66,7 +66,7 @@ public class MessageActivity extends BaseActivity {
         if (item.getItemId() == 1) {
             databaseHelper.markAllNotificationsAsRead();
             loadNotifications();
-            Toast.makeText(this, "All marked as read", Toast.LENGTH_SHORT).show();
+            NotificationUtils.showTopNotification(this, databaseHelper, "All marked as read", false);
             return true;
         }
         return super.onOptionsItemSelected(item);

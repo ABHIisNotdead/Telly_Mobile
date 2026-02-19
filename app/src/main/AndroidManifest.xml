@@ -91,6 +91,9 @@
         <activity
             android:name=".TrialBalanceActivity"
             android:exported="false" />
+        <activity
+            android:name=".InventoryReportActivity"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

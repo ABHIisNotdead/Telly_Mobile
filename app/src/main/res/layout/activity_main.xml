@@ -19,6 +19,7 @@
             android:background="?attr/colorPrimary"
             app:title="Telly Mobile"
             app:titleTextColor="@color/on_primary"
+            app:subtitleTextColor="@color/on_primary"
             app:menu="@null"
             style="@style/Widget.Material3.Toolbar.Surface">
 
@@ -32,152 +33,256 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:padding="16dp">
+        android:padding="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Masters Section -->
+            <!-- Featured Section -->
             <TextView
-                android:text="Masters"
+                android:text="Daily Operations"
                 style="@style/SectionHeader"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"/>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardVoucherEntry"
                 style="@style/DashboardCard"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/premium_primary">
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <Button
-                        android:id="@+id/btnCreateMaster"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Create Master"
-                        app:icon="@drawable/ic_add"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_marginBottom="8dp"/>
-
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_receipt"
+                        app:tint="@color/white"
+                        android:padding="8dp"
+                        android:background="@drawable/ic_inventory"
+                        android:backgroundTint="#33FFFFFF"/>
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/btnAlterMaster"
-                            android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Alter"
-                            app:icon="@drawable/ic_edit"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_marginEnd="4dp"/>
-
-                        <Button
-                            android:id="@+id/btnChartOfAC"
-                            android:layout_width="0dp"
+                            android:text="Voucher Entry"
+                            android:textColor="@color/white"
+                            android:textAppearance="?attr/textAppearanceTitleLarge"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Chart of A/c"
-                            app:icon="@drawable/ic_account_tree"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_marginStart="4dp"/>
+                            android:text="Record new sales, purchases, or payments"
+                            android:textColor="#CCFFFFFF"
+                            android:textAppearance="?attr/textAppearanceLabelMedium"/>
                     </LinearLayout>
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="@color/white"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Transactions Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDayBook"
+                    style="@style/DashboardGridItem"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:foreground="?attr/selectableItemBackground">
+                    
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_book"
+                            app:tint="@color/premium_accent"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Day Book"
+                            android:gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVouchers"
+                    style="@style/DashboardGridItem"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:foreground="?attr/selectableItemBackground">
+                    
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_list_alt"
+                            app:tint="@color/premium_accent"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Vouchers"
+                            android:gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Masters Section -->
             <TextView
-                android:text="Transactions"
+                android:text="Data Management"
                 style="@style/SectionHeader"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"/>
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/DashboardCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <LinearLayout
+                <GridLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    
+                    android:columnCount="2">
+
                     <Button
-                        android:id="@+id/btnVoucherEntry"
-                        android:layout_width="match_parent"
+                        android:id="@+id/btnCreateMaster"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Voucher Entry"
-                        app:icon="@drawable/ic_receipt"
+                        android:layout_columnWeight="1"
+                        android:text="Create"
+                        app:icon="@drawable/ic_add"
                         style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_marginBottom="8dp"/>
+                        android:layout_margin="4dp"/>
 
-                    <LinearLayout
+                    <Button
+                        android:id="@+id/btnAlterMaster"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="Alter"
+                        app:icon="@drawable/ic_edit"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_margin="4dp"/>
+
+                    <Button
+                        android:id="@+id/btnChartOfAC"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:layout_columnSpan="2"
+                        android:text="Chart of Accounts"
+                        app:icon="@drawable/ic_account_tree"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_margin="4dp"/>
 
-                        <Button
-                            android:id="@+id/btnVouchers"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Vouchers"
-                            app:icon="@drawable/ic_list_alt"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_marginEnd="4dp"/>
-
-                        <Button
-                            android:id="@+id/btnDayBook"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Day Book"
-                            app:icon="@drawable/ic_book"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_marginStart="4dp"/>
-                    </LinearLayout>
-
-                </LinearLayout>
+                </GridLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Reports Section -->
             <TextView
-                android:text="Reports"
+                android:text="Financial Insights"
                 style="@style/SectionHeader"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                style="@style/DashboardCard"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSalesReports"
+                    style="@style/DashboardGridItem"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <Button
-                        android:id="@+id/btnSalesReports"
+                    android:layout_weight="1"
+                    android:foreground="?attr/selectableItemBackground">
+                    
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Sales &amp; Graphs"
-                        app:icon="@drawable/ic_bar_chart"
-                        style="@style/Widget.Material3.Button.TonalButton"/>
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_bar_chart"
+                            app:tint="@color/premium_accent"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sales &amp;\nGraphs"
+                            android:gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardInventoryStock"
+                    style="@style/DashboardGridItem"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:foreground="?attr/selectableItemBackground">
+                    
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/ic_inventory"
+                            app:tint="@color/premium_accent"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Inventory\n&amp; Stock"
+                            android:gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
-            <!-- System Section moved to Menu -->
-            
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="48dp" />
