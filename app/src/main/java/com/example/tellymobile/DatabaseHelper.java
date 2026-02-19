@@ -9,12 +9,16 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.text.ParseException;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private Context context;
     private static final String DATABASE_NAME = "TellyMobile.db";
-    private static final int DATABASE_VERSION = 35; // Added Payment Mode for Receipt
+    private static final int DATABASE_VERSION = 36; // Added Safety Checks for Reporting Columns
 
 
     // ...
@@ -408,6 +412,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_PURCHASE_DATE + " TEXT, " +
                 COLUMN_SUPPLIER_NAME + " TEXT, " +
                 COLUMN_PURCHASE_TOTAL + " REAL, " +
+                COLUMN_SUPPLIER_INV_DATE + " TEXT, " +
+                COLUMN_SUPPLIER_CST + " TEXT, " +
+                COLUMN_SUPPLIER_TIN + " TEXT, " +
+                COLUMN_BUYER_VAT_TIN + " TEXT, " +
+                COLUMN_SUPPLIER_INV_NO + " TEXT, " +
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryPurchases);
 
@@ -419,7 +428,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_PUR_RATE + " REAL, " +
                 COLUMN_PUR_AMOUNT + " REAL, " +
                 COLUMN_PUR_UNIT + " TEXT, " +
-                COLUMN_PUR_HSN + " TEXT);"; // Added
+                COLUMN_PUR_HSN + " TEXT);"; 
         db.execSQL(queryPurchaseItems);
         
         String queryVoucherCharges = "CREATE TABLE " + TABLE_VOUCHER_CHARGES + " (" +
@@ -469,8 +478,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_RECEIPT_NO + " TEXT, " +
                 COLUMN_RECEIPT_DATE + " TEXT, " +
                 COLUMN_RECEIPT_NARRATION + " TEXT, " +
-                COLUMN_RECEIPT_THROUGH + " TEXT, " + // New
-                COLUMN_RECEIPT_TOTAL + " REAL, " +   // New
+                COLUMN_RECEIPT_THROUGH + " TEXT, " + 
+                COLUMN_RECEIPT_TOTAL + " REAL, " +
+                COLUMN_RECEIPT_PAYMENT_MODE + " TEXT, " +
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryReceipts);
         
@@ -803,6 +813,95 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             } catch (Exception e) {
                 // Column likely already exists, ignore
             }
+        }
+        
+        // Final Safety Net: Ensure all tables exist for v35+ (Covers any restore scenario)
+        if (newVersion >= 35) {
+             try {
+                 // Purchases
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PURCHASES + " (" +
+                        COLUMN_PURCHASE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_PURCHASE_INV_NO + " TEXT, " +
+                        COLUMN_PURCHASE_DATE + " TEXT, " +
+                        COLUMN_SUPPLIER_NAME + " TEXT, " +
+                        COLUMN_PURCHASE_TOTAL + " REAL, " +
+                        COLUMN_SUPPLIER_INV_DATE + " TEXT, " +
+                        COLUMN_SUPPLIER_CST + " TEXT, " +
+                        COLUMN_SUPPLIER_TIN + " TEXT, " +
+                        COLUMN_BUYER_VAT_TIN + " TEXT, " +
+                        COLUMN_SUPPLIER_INV_NO + " TEXT, " +
+                        COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);");
+
+                 // Purchase Items
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PURCHASE_ITEMS + " (" +
+                        COLUMN_PUR_ITEM_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_PUR_ID_FK + " INTEGER, " +
+                        COLUMN_PUR_ITEM_NAME + " TEXT, " +
+                        COLUMN_PUR_QTY + " REAL, " +
+                        COLUMN_PUR_RATE + " REAL, " +
+                        COLUMN_PUR_AMOUNT + " REAL, " +
+                        COLUMN_PUR_UNIT + " TEXT, " +
+                        COLUMN_PUR_HSN + " TEXT);");
+
+                 // Receipts
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_RECEIPTS + " (" +
+                        COLUMN_RECEIPT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_RECEIPT_NO + " TEXT, " +
+                        COLUMN_RECEIPT_DATE + " TEXT, " +
+                        COLUMN_RECEIPT_NARRATION + " TEXT, " +
+                        COLUMN_RECEIPT_THROUGH + " TEXT, " +
+                        COLUMN_RECEIPT_TOTAL + " REAL, " +
+                        COLUMN_RECEIPT_PAYMENT_MODE + " TEXT, " +
+                        COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);");
+                 
+                 // Payments
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PAYMENTS + " (" +
+                        COLUMN_PAYMENT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_PAYMENT_VOUCHER_NO + " TEXT, " +
+                        COLUMN_PAYMENT_DATE + " TEXT, " +
+                        COLUMN_PAYMENT_THROUGH_LEDGER + " TEXT, " + 
+                        COLUMN_PAYMENT_TOTAL_AMOUNT + " REAL, " +
+                        COLUMN_PAYMENT_NARRATION + " TEXT, " +
+                        COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);");
+
+                 // Voucher Charges       
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_VOUCHER_CHARGES + " (" +
+                        COLUMN_CHARGE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_CHARGE_VOUCHER_ID + " INTEGER, " +
+                        COLUMN_CHARGE_VOUCHER_TYPE + " TEXT, " +
+                        COLUMN_CHARGE_LEDGER_ID + " INTEGER, " +
+                        COLUMN_CHARGE_LEDGER_NAME + " TEXT, " +
+                        COLUMN_CHARGE_AMOUNT + " REAL, " +
+                        COLUMN_CHARGE_IS_PERCENTAGE + " INTEGER, " +
+                        COLUMN_CHARGE_RATE + " REAL, " +
+                        COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0, " +
+                        COLUMN_CHARGE_PAYMENT_MODE + " TEXT);");
+                        
+                 // Notifications
+                 db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_NOTIFICATIONS + " (" +
+                        COLUMN_NOTIF_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        COLUMN_NOTIF_TITLE + " TEXT, " +
+                        COLUMN_NOTIF_MESSAGE + " TEXT, " +
+                        COLUMN_NOTIF_TYPE + " TEXT, " +
+                        COLUMN_NOTIF_TIMESTAMP + " INTEGER, " +
+                        COLUMN_NOTIF_IS_READ + " INTEGER DEFAULT 0);");
+
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
+        }
+        if (oldVersion < 36 && newVersion >= 36) {
+             try {
+                 // Safety Check: Ensure Reporting Columns Exist by attempting to add them (ignoring errors if present)
+                 try { db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_TYPE + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_THROUGH + " TEXT"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_TOTAL + " REAL"); } catch (Exception e) {}
+                 try { db.execSQL("ALTER TABLE " + TABLE_PAYMENTS + " ADD COLUMN " + COLUMN_PAYMENT_THROUGH_LEDGER + " TEXT"); } catch (Exception e) {}
+             } catch (Exception e) {
+                 e.printStackTrace();
+             }
         }
     }
 
@@ -2012,5 +2111,277 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_PAYMENT_TOTAL_AMOUNT, total);
         cv.put(COLUMN_PAYMENT_NARRATION, narration);
         db.update(TABLE_PAYMENTS, cv, COLUMN_PAYMENT_ID + "=?", new String[]{String.valueOf(id)});
+    }
+    // --- Advanced Reporting Methods ---
+
+    public static class LedgerTransaction {
+        public String date;
+        public String voucherNo;
+        public String type;
+        public double debit;
+        public double credit;
+        public String narration;
+
+        public LedgerTransaction(String date, String voucherNo, String type, double debit, double credit, String narration) {
+            this.date = date; 
+            this.voucherNo = voucherNo; 
+            this.type = type; 
+            this.debit = debit; 
+            this.credit = credit;
+            this.narration = narration;
+        }
+    }
+
+    public List<LedgerTransaction> getLedgerTransactions(String ledgerName) {
+        List<LedgerTransaction> transactions = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        verifySchema(db); // Self-Healing
+
+        String[] args = new String[]{ledgerName};
+
+        // 1. Sales Header (If ledger is Customer)
+        String qSales = "SELECT " + COLUMN_INVOICE_DATE + ", " + COLUMN_INVOICE_NO + ", 'Sales', " + COLUMN_TOTAL_AMOUNT + ", 0, '' FROM " + TABLE_INVOICES + " WHERE " + COLUMN_CUSTOMER_NAME + "=?";
+        try {
+             Cursor c1 = db.rawQuery(qSales, args);
+             if (c1 != null) {
+                 while (c1.moveToNext()) transactions.add(new LedgerTransaction(c1.getString(0), c1.getString(1), c1.getString(2), c1.getDouble(3), c1.getDouble(4), c1.getString(5)));
+                 c1.close();
+             }
+        } catch (Exception e) {}
+
+        // 2. Purchase Header (If ledger is Supplier)
+        String qPurch = "SELECT " + COLUMN_PURCHASE_DATE + ", " + COLUMN_PURCHASE_INV_NO + ", 'Purchase', 0, " + COLUMN_PURCHASE_TOTAL + ", '' FROM " + TABLE_PURCHASES + " WHERE " + COLUMN_SUPPLIER_NAME + "=?";
+        try {
+             Cursor c2 = db.rawQuery(qPurch, args);
+             if (c2 != null) {
+                 while (c2.moveToNext()) transactions.add(new LedgerTransaction(c2.getString(0), c2.getString(1), c2.getString(2), c2.getDouble(3), c2.getDouble(4), c2.getString(5)));
+                 c2.close();
+             }
+        } catch (Exception e) {}
+
+        // 3. Payment Header (If ledger is Bank/Cash - "Through")
+        String qPay = "SELECT " + COLUMN_PAYMENT_DATE + ", " + COLUMN_PAYMENT_VOUCHER_NO + ", 'Payment', 0, " + COLUMN_PAYMENT_TOTAL_AMOUNT + ", " + COLUMN_PAYMENT_NARRATION + " FROM " + TABLE_PAYMENTS + " WHERE " + COLUMN_PAYMENT_THROUGH_LEDGER + "=?";
+        try {
+             Cursor c3 = db.rawQuery(qPay, args);
+             if (c3 != null) {
+                 while (c3.moveToNext()) transactions.add(new LedgerTransaction(c3.getString(0), c3.getString(1), c3.getString(2), c3.getDouble(3), c3.getDouble(4), c3.getString(5)));
+                 c3.close();
+             }
+        } catch (Exception e) {}
+
+        // 4. Receipt Header (If ledger is Bank/Cash - "Through")
+        String qRec = "SELECT " + COLUMN_RECEIPT_DATE + ", " + COLUMN_RECEIPT_NO + ", 'Receipt', " + COLUMN_RECEIPT_TOTAL + ", 0, " + COLUMN_RECEIPT_NARRATION + " FROM " + TABLE_RECEIPTS + " WHERE " + COLUMN_RECEIPT_THROUGH + "=?";
+        try {
+            Cursor c4 = db.rawQuery(qRec, args);
+            if (c4 != null) {
+                while (c4.moveToNext()) transactions.add(new LedgerTransaction(c4.getString(0), c4.getString(1), c4.getString(2), c4.getDouble(3), c4.getDouble(4), c4.getString(5)));
+                c4.close();
+            }
+        } catch (Exception e) {}
+
+        // 5. Charges (Journal, Contra, Payment Party, Receipt Party, etc.)
+        // 5a. Journals/Contras
+        // Use SAFE query (check if columns exist via try catch or just try catch block)
+        try {
+            String qJ = "SELECT j." + COLUMN_JOURNAL_DATE + ", j." + COLUMN_JOURNAL_NO + ", j." + COLUMN_JOURNAL_TYPE + ", c." + COLUMN_CHARGE_IS_DEBIT + ", c." + COLUMN_CHARGE_AMOUNT + ", j." + COLUMN_JOURNAL_NARRATION + 
+                        " FROM " + TABLE_VOUCHER_CHARGES + " c JOIN " + TABLE_JOURNALS + " j ON c." + COLUMN_CHARGE_VOUCHER_ID + " = j." + COLUMN_JOURNAL_ID + 
+                        " WHERE c." + COLUMN_CHARGE_LEDGER_NAME + "=? AND (c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Journal' OR c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Contra')";
+            Cursor c5 = db.rawQuery(qJ, args);
+
+        if (c5 != null) {
+            while (c5.moveToNext()) {
+                boolean isDebit = c5.getInt(3) == 1;
+                double amt = c5.getDouble(4);
+                transactions.add(new LedgerTransaction(c5.getString(0), c5.getString(1), c5.getString(2), isDebit ? amt : 0, isDebit ? 0 : amt, c5.getString(5)));
+            }
+            c5.close();
+        }
+        } catch (Exception e) {}
+
+        // 5b. Payment Party
+        try {
+            String qP = "SELECT p." + COLUMN_PAYMENT_DATE + ", p." + COLUMN_PAYMENT_VOUCHER_NO + ", 'Payment', c." + COLUMN_CHARGE_IS_DEBIT + ", c." + COLUMN_CHARGE_AMOUNT + ", p." + COLUMN_PAYMENT_NARRATION + 
+                        " FROM " + TABLE_VOUCHER_CHARGES + " c JOIN " + TABLE_PAYMENTS + " p ON c." + COLUMN_CHARGE_VOUCHER_ID + " = p." + COLUMN_PAYMENT_ID + 
+                        " WHERE c." + COLUMN_CHARGE_LEDGER_NAME + "=? AND c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Payment'";
+            Cursor c6 = db.rawQuery(qP, args);
+            if (c6 != null) {
+                while (c6.moveToNext()) {
+                    boolean isDebit = c6.getInt(3) == 1;
+                    double amt = c6.getDouble(4);
+                    transactions.add(new LedgerTransaction(c6.getString(0), c6.getString(1), c6.getString(2), isDebit ? amt : 0, isDebit ? 0 : amt, c6.getString(5)));
+                }
+                c6.close();
+            }
+        } catch (Exception e) {}
+
+        // 5c. Receipt Party
+        try {
+            String qR = "SELECT r." + COLUMN_RECEIPT_DATE + ", r." + COLUMN_RECEIPT_NO + ", 'Receipt', c." + COLUMN_CHARGE_IS_DEBIT + ", c." + COLUMN_CHARGE_AMOUNT + ", r." + COLUMN_RECEIPT_NARRATION + 
+                        " FROM " + TABLE_VOUCHER_CHARGES + " c JOIN " + TABLE_RECEIPTS + " r ON c." + COLUMN_CHARGE_VOUCHER_ID + " = r." + COLUMN_RECEIPT_ID + 
+                        " WHERE c." + COLUMN_CHARGE_LEDGER_NAME + "=? AND c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Receipt'";
+            Cursor c7 = db.rawQuery(qR, args);
+            if (c7 != null) {
+                while (c7.moveToNext()) {
+                    boolean isDebit = c7.getInt(3) == 1;
+                    double amt = c7.getDouble(4);
+                    transactions.add(new LedgerTransaction(c7.getString(0), c7.getString(1), c7.getString(2), isDebit ? amt : 0, isDebit ? 0 : amt, c7.getString(5)));
+                }
+                c7.close();
+            }
+        } catch (Exception e) {}
+        
+        // 5d. Sales/Purchase Additional Charges
+        try {
+             String qChS = "SELECT i." + COLUMN_INVOICE_DATE + ", i." + COLUMN_INVOICE_NO + ", 'Sales', c." + COLUMN_CHARGE_IS_DEBIT + ", c." + COLUMN_CHARGE_AMOUNT + ", ''" + 
+                        " FROM " + TABLE_VOUCHER_CHARGES + " c JOIN " + TABLE_INVOICES + " i ON c." + COLUMN_CHARGE_VOUCHER_ID + " = i." + COLUMN_INVOICE_ID + 
+                        " WHERE c." + COLUMN_CHARGE_LEDGER_NAME + "=? AND c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Sales'";
+            Cursor c8 = db.rawQuery(qChS, args);
+            if (c8 != null) {
+                while (c8.moveToNext()) {
+                    boolean isDebit = c8.getInt(3) == 1;
+                    double amt = c8.getDouble(4);
+                    transactions.add(new LedgerTransaction(c8.getString(0), c8.getString(1), c8.getString(2), isDebit ? amt : 0, isDebit ? 0 : amt, c8.getString(5)));
+                }
+                c8.close();
+            }
+        } catch (Exception e) {}
+        
+        try {
+             String qChP = "SELECT p." + COLUMN_PURCHASE_DATE + ", p." + COLUMN_PURCHASE_INV_NO + ", 'Purchase', c." + COLUMN_CHARGE_IS_DEBIT + ", c." + COLUMN_CHARGE_AMOUNT + ", ''" + 
+                        " FROM " + TABLE_VOUCHER_CHARGES + " c JOIN " + TABLE_PURCHASES + " p ON c." + COLUMN_CHARGE_VOUCHER_ID + " = p." + COLUMN_PURCHASE_ID + 
+                        " WHERE c." + COLUMN_CHARGE_LEDGER_NAME + "=? AND c." + COLUMN_CHARGE_VOUCHER_TYPE + "='Purchase'";
+            Cursor c9 = db.rawQuery(qChP, args);
+            if (c9 != null) {
+                while (c9.moveToNext()) {
+                    boolean isDebit = c9.getInt(3) == 1;
+                    double amt = c9.getDouble(4);
+                    transactions.add(new LedgerTransaction(c9.getString(0), c9.getString(1), c9.getString(2), isDebit ? amt : 0, isDebit ? 0 : amt, c9.getString(5)));
+                }
+                c9.close();
+            }
+        } catch (Exception e) {}
+
+        // Sort by Date (String Comparison or Parse)
+        final SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
+
+        java.util.Collections.sort(transactions, (o1, o2) -> {
+            try {
+                if (o1.date == null) return -1;
+                if (o2.date == null) return 1;
+                Date d1 = sdf.parse(o1.date.replace("/", "-"));
+                Date d2 = sdf.parse(o2.date.replace("/", "-"));
+                return d1.compareTo(d2);
+            } catch (Exception e) {
+                return 0; // Keep original order or logic to sort via string?
+            }
+        });
+
+        return transactions;
+    }
+
+
+    public static class TrialBalanceRow {
+        public String ledgerName;
+        public String groupName;
+        public double debit; 
+        public double credit; 
+
+        public TrialBalanceRow(String ledgerName, String groupName, double debit, double credit) {
+            this.ledgerName = ledgerName; this.groupName = groupName; this.debit = debit; this.credit = credit;
+        }
+    }
+
+    private void verifySchema(SQLiteDatabase db) {
+        // Self-Healing: Ensure columns exist before running complex reports
+        try { db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_TYPE + " TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_THROUGH + " TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_TOTAL + " REAL"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
+    }
+
+    public List<TrialBalanceRow> getTrialBalance() {
+        List<TrialBalanceRow> rows = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        verifySchema(db); // Ensure columns exist
+
+        // Get All Ledgers
+        String q = "SELECT " + COLUMN_NAME + ", " + COLUMN_GROUP + ", " + COLUMN_BALANCE + ", " + COLUMN_TYPE + " FROM " + TABLE_NAME; 
+        Cursor c = null;
+        try {
+            c = db.rawQuery(q, null);
+        } catch (Exception e) {
+             // Fallback if column missing despite verify
+             q = "SELECT " + COLUMN_NAME + ", " + COLUMN_GROUP + ", " + COLUMN_BALANCE + ", 'Dr' as " + COLUMN_TYPE + " FROM " + TABLE_NAME; 
+             c = db.rawQuery(q, null);
+        }
+        
+        if (c != null) {
+            while (c.moveToNext()) {
+                String name = c.getString(0);
+                String group = c.getString(1);
+                double opening = c.getDouble(2);
+                String type = c.getString(3);
+                
+                if (type != null && type.equalsIgnoreCase("Cr")) {
+                    opening = -opening;
+                }
+                
+                double netBalance = calculateCurrentBalance(name, opening);
+                
+                if (netBalance > 0) {
+                    rows.add(new TrialBalanceRow(name, group, netBalance, 0));
+                } else if (netBalance < 0) {
+                    rows.add(new TrialBalanceRow(name, group, 0, Math.abs(netBalance)));
+                } else {
+                    rows.add(new TrialBalanceRow(name, group, 0, 0));
+                }
+            }
+            c.close();
+        }
+        return rows;
+    }
+
+    private double calculateCurrentBalance(String ledgerName, double openingBalance) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String[] args = new String[]{ledgerName};
+        double balance = openingBalance; 
+        
+        double totalDr = 0;
+        double totalCr = 0;
+
+        // 1. Sales (Ledger is Customer -> Debit)
+        totalDr += getSum(db, "SELECT SUM(" + COLUMN_TOTAL_AMOUNT + ") FROM " + TABLE_INVOICES + " WHERE " + COLUMN_CUSTOMER_NAME + "=?", args);
+
+        // 2. Purchase (Ledger is Supplier -> Credit)
+        totalCr += getSum(db, "SELECT SUM(" + COLUMN_PURCHASE_TOTAL + ") FROM " + TABLE_PURCHASES + " WHERE " + COLUMN_SUPPLIER_NAME + "=?", args);
+
+        // 3. Payment (Ledger is Bank -> Credit)
+        totalCr += getSum(db, "SELECT SUM(" + COLUMN_PAYMENT_TOTAL_AMOUNT + ") FROM " + TABLE_PAYMENTS + " WHERE " + COLUMN_PAYMENT_THROUGH_LEDGER + "=?", args);
+
+        // 4. Receipt (Ledger is Bank -> Debit)
+        totalDr += getSum(db, "SELECT SUM(" + COLUMN_RECEIPT_TOTAL + ") FROM " + TABLE_RECEIPTS + " WHERE " + COLUMN_RECEIPT_THROUGH + "=?", args);
+
+        // 5. Charges
+        // 5a. Debit Charges
+        String qDr = "SELECT SUM(" + COLUMN_CHARGE_AMOUNT + ") FROM " + TABLE_VOUCHER_CHARGES + " WHERE " + COLUMN_CHARGE_LEDGER_NAME + "=? AND " + COLUMN_CHARGE_IS_DEBIT + "=1";
+        totalDr += getSum(db, qDr, args);
+
+        // 5b. Credit Charges
+        String qCr = "SELECT SUM(" + COLUMN_CHARGE_AMOUNT + ") FROM " + TABLE_VOUCHER_CHARGES + " WHERE " + COLUMN_CHARGE_LEDGER_NAME + "=? AND " + COLUMN_CHARGE_IS_DEBIT + "=0";
+        totalCr += getSum(db, qCr, args);
+
+        return balance + (totalDr - totalCr);
+    }
+
+    private double getSum(SQLiteDatabase db, String query, String[] args) {
+        Cursor c = db.rawQuery(query, args);
+        double val = 0;
+        if (c != null) {
+            if (c.moveToFirst()) val = c.getDouble(0);
+            c.close();
+        }
+        return val;
     }
 }

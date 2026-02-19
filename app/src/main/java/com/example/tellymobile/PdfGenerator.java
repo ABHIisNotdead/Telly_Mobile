@@ -338,6 +338,13 @@ public class PdfGenerator {
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             
             Intent chooser = Intent.createChooser(intent, "Open PDF with");
+            // Important: specific fix for "calling uid not have permission"
+            java.util.List<android.content.pm.ResolveInfo> resInfoList = context.getPackageManager().queryIntentActivities(chooser, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+            for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                String packageName = resolveInfo.activityInfo.packageName;
+                context.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+
             try {
                 context.startActivity(chooser);
             } catch (android.content.ActivityNotFoundException ex) {

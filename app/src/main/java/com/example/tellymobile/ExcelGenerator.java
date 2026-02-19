@@ -1135,9 +1135,19 @@ public class ExcelGenerator {
                 Intent intent = new Intent(Intent.ACTION_VIEW);
                 intent.setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                context.startActivity(Intent.createChooser(intent, "Open Excel with"));
+                
+                Intent chooser = Intent.createChooser(intent, "Open Excel with");
+                // Important: specific fix for "calling uid not have permission"
+                java.util.List<android.content.pm.ResolveInfo> resInfoList = context.getPackageManager().queryIntentActivities(chooser, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    context.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+
+                context.startActivity(chooser);
             } catch (Exception e) {
                 e.printStackTrace();
+                Toast.makeText(context, "No app found to open Excel", Toast.LENGTH_SHORT).show();
             }
         });
     }

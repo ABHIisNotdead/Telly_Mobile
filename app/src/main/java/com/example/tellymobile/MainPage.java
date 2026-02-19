@@ -19,7 +19,13 @@ import java.util.List;
 import java.util.ArrayList;
 import android.app.AlertDialog;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.Manifest;
+import android.os.Build;
+import android.content.pm.PackageManager;
+import androidx.core.content.ContextCompat;
+import androidx.activity.result.contract.ActivityResultContracts;
+import java.util.Map;
+import android.widget.Toast;
 
 public class MainPage extends BaseActivity {
 
@@ -91,6 +97,52 @@ public class MainPage extends BaseActivity {
             .show();
     }
 
+    // Permission Launcher
+    private final androidx.activity.result.ActivityResultLauncher<String[]> requestPermissionLauncher =
+        registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+            boolean allGranted = true;
+            for (Map.Entry<String, Boolean> entry : result.entrySet()) {
+                if (!entry.getValue()) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (allGranted) {
+                Toast.makeText(this, "Permissions Granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Permissions Denied. Some features (Backup, Excel) may not work.", Toast.LENGTH_LONG).show();
+            }
+        });
+
+    private void checkAndRequestPermissions() {
+        List<String> permissions = new ArrayList<>();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.READ_MEDIA_IMAGES);
+            }
+             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED);
+            }
+        } else {
+            // Android 12 and below
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+                 // Write permission needed for legacy storage (Android 10 and below)
+                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                     permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                 }
+            }
+        }
+
+        if (!permissions.isEmpty()) {
+            requestPermissionLauncher.launch(permissions.toArray(new String[0]));
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,6 +156,7 @@ public class MainPage extends BaseActivity {
         companyList = new ArrayList<>();     // Initialize List
         refreshCompanyList();
         updateToolbarTitle();
+        checkAndRequestPermissions();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -213,30 +266,50 @@ public class MainPage extends BaseActivity {
     }
     
     private void showCompanySelectionDialog() {
-        refreshCompanyList();
+        refreshCompanyList(); // Refresh list to get latest data
         
-        // Prepare list for display (Names only)
-        final String[] companyNames = new String[companyList.size()];
-        for (int i = 0; i < companyList.size(); i++) {
-            companyNames[i] = companyList.get(i).name;
+        // Remove the "+ Add New Company" dummy item from list for Adapter, we have a button for it
+        List<DatabaseHelper.Company> displayList = new ArrayList<>(companyList);
+        // Check if last item is dummy and remove
+        if (!displayList.isEmpty() && displayList.get(displayList.size()-1).id == -1) {
+            displayList.remove(displayList.size()-1); 
         }
 
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Select Company");
-        builder.setItems(companyNames, (dialog, which) -> {
-            DatabaseHelper.Company selected = companyList.get(which);
-            if (selected.id == -1) {
-                showAddCompanyDialog();
-            } else {
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        View view = getLayoutInflater().inflate(R.layout.dialog_select_company, null);
+        builder.setView(view);
+        
+        final android.app.AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvCompanyList);
+        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        
+        CompanyAdapter adapter = new CompanyAdapter(displayList, company -> {
+            // On Company Select
+             getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit()
-                    .putInt(KEY_COMPANY_ID, selected.id)
+                    .putInt(KEY_COMPANY_ID, company.id)
                     .apply();
-                updateToolbarTitle();
-                // Optionally show toast or refresh data if needed
-            }
+             updateToolbarTitle();
+             dialog.dismiss();
+             android.widget.Toast.makeText(MainPage.this, "Switched to: " + company.name, android.widget.Toast.LENGTH_SHORT).show();
+             // Ideally refresh dashboard data here
         });
-        builder.show();
+        rv.setAdapter(adapter);
+        
+        android.widget.ImageButton btnClose = view.findViewById(R.id.btnCloseDialog);
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        
+        Button btnAdd = view.findViewById(R.id.btnAddNewCompany);
+        btnAdd.setOnClickListener(v -> {
+            dialog.dismiss();
+            showAddCompanyDialog();
+        });
+
+        dialog.show();
     }
     
     private void updateToolbarTitle() {
@@ -317,6 +390,11 @@ public class MainPage extends BaseActivity {
             }
         });
         builder.setNegativeButton("Cancel", null);
-        builder.show();
+        
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+        dialog.show();
     }
 }

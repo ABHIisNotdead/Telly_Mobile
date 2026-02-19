@@ -346,8 +346,13 @@ public class VoucherActivity extends BaseActivity {
                 String logoUri = c.getString(c.getColumnIndexOrThrow("company_logo")); // Use literal column name if constant check fails
                 android.widget.ImageView ivLogo = findViewById(R.id.ivVoucherCompanyLogo);
                 if (logoUri != null && !logoUri.isEmpty()) {
-                    ivLogo.setVisibility(View.VISIBLE);
-                    ivLogo.setImageURI(android.net.Uri.parse(logoUri));
+                    try {
+                        ivLogo.setVisibility(View.VISIBLE);
+                        ivLogo.setImageURI(android.net.Uri.parse(logoUri));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        ivLogo.setVisibility(View.GONE); // Hide if permission/load fails
+                    }
                 } else {
                     ivLogo.setVisibility(View.GONE);
                 }
@@ -1013,10 +1018,10 @@ public class VoucherActivity extends BaseActivity {
 
     private boolean saveVoucher(boolean shouldFinish) {
         String type = spnVoucherType.getSelectedItem().toString();
-        String voucherNo = etVoucherNo.getText().toString();
-        String date = etDate.getText().toString();
-        String partyName = actvPartyName.getText().toString();
-        String narration = etDeliveryNote.getText().toString();
+        String voucherNo = etVoucherNo.getText().toString().trim();
+        String date = etDate.getText().toString().trim();
+        String partyName = actvPartyName.getText().toString().trim();
+        String narration = etDeliveryNote.getText().toString().trim();
 
         if (voucherNo.isEmpty() || date.isEmpty()) {
             Toast.makeText(this, "Number and Date are required", Toast.LENGTH_SHORT).show();
@@ -1075,7 +1080,7 @@ public class VoucherActivity extends BaseActivity {
                   
                   voucherId = editId;
              } else if (type.equals("Payment")) {
-                 String throughLedger = actvBankLedger.getText().toString();
+                 String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
                      Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
                      return false;
@@ -1085,7 +1090,7 @@ public class VoucherActivity extends BaseActivity {
                  databaseHelper.updatePayment(editId, voucherNo, date, throughLedger, totalAmount, finalNarration);
                  voucherId = editId;
              } else if (type.equals("Receipt")) {
-                 String throughLedger = actvBankLedger.getText().toString();
+                 String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
                      Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
                      return false;
@@ -1139,7 +1144,7 @@ public class VoucherActivity extends BaseActivity {
                     databaseHelper.addPurchaseItem(voucherId, item.getItemName(), item.getQuantity(), item.getRate(), item.getAmount(), item.getUnit(), item.getHsn());
                 }
             } else if (type.equals("Payment") || type.equals("Receipt")) {
-                 String throughLedger = actvBankLedger.getText().toString();
+                 String throughLedger = actvBankLedger.getText().toString().trim();
                  if (throughLedger.isEmpty()) {
                      Toast.makeText(this, "Through Ledger is required", Toast.LENGTH_SHORT).show();
                      return false;

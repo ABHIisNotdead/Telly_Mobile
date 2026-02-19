@@ -61,6 +61,16 @@ public class ReportsActivity extends BaseActivity {
         setupSpinners();
         
         rgChartType.setOnCheckedChangeListener((group, checkedId) -> updateChart());
+        
+        findViewById(R.id.btnLedgerReport).setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(this, LedgerReportActivity.class);
+            startActivity(intent);
+        });
+        
+        findViewById(R.id.btnTrialBalance).setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(this, TrialBalanceActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void initViews() {
