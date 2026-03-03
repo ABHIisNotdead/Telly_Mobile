@@ -26,6 +26,10 @@ import androidx.core.content.ContextCompat;
 import androidx.activity.result.contract.ActivityResultContracts;
 import java.util.Map;
 import android.widget.Toast;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import java.io.File;
+import android.os.Environment;
 
 public class MainPage extends BaseActivity {
 
@@ -196,14 +200,98 @@ public class MainPage extends BaseActivity {
         } else if (item.getItemId() == R.id.action_messages) {
             startActivity(new Intent(MainPage.this, MessageActivity.class));
             return true;
+        } else if (item.getItemId() == R.id.action_backup_settings) {
+            startActivity(new Intent(MainPage.this, BackupSettingsActivity.class));
+            return true;
         } else if (item.getItemId() == R.id.action_backup) {
-            createBackupLauncher.launch("TellyMobile_Backup.db");
+            showBackupOptionsDialog();
             return true;
         } else if (item.getItemId() == R.id.action_restore) {
-             openRestoreLauncher.launch(new String[]{"*/*"}); // Open any file, let Utils handle or fail if invalid content
+             showRestoreOptionsDialog();
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showBackupOptionsDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Backup Destination")
+            .setItems(new String[]{"Local Device Storage", "Google Drive"}, (dialog, which) -> {
+                if (which == 0) {
+                    createBackupLauncher.launch("TellyMobile_Backup.db");
+                } else {
+                    performDriveBackup();
+                }
+            })
+            .show();
+    }
+
+    private void showRestoreOptionsDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Restore Source")
+            .setItems(new String[]{"Local Device Storage", "Google Drive"}, (dialog, which) -> {
+                if (which == 0) {
+                    openRestoreLauncher.launch(new String[]{"*/*"}); // Open any file, let Utils handle or fail if invalid content
+                } else {
+                    performDriveRestore();
+                }
+            })
+            .show();
+    }
+
+    private void performDriveBackup() {
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        if (account == null) {
+            Toast.makeText(this, "Please sign in via Backup Settings first", Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, "Starting Google Drive Backup...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                DriveServiceHelper helper = new DriveServiceHelper(this, account);
+                File data = Environment.getDataDirectory();
+                String currentDBPath = "//data//" + getPackageName() + "//databases//TellyMobile.db";
+                File currentDB = new File(data, currentDBPath);
+                if (currentDB.exists()) {
+                    helper.uploadDatabaseFile(currentDB);
+                    runOnUiThread(() -> NotificationUtils.showTopNotification(this, dbHelper, "Google Drive Backup Successful", false));
+                } else {
+                    runOnUiThread(() -> NotificationUtils.showTopNotification(this, dbHelper, "Database Not Found", true));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> NotificationUtils.showTopNotification(this, dbHelper, "Drive Backup Failed: " + e.getMessage(), true));
+            }
+        }).start();
+    }
+
+    private void performDriveRestore() {
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        if (account == null) {
+            Toast.makeText(this, "Please sign in via Backup Settings first", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Confirm Restore")
+            .setMessage("WARNING: This will replace your current data with the Google Drive backup. Proceed?")
+            .setPositiveButton("YES", (dialog, which) -> {
+                 Toast.makeText(this, "Downloading from Google Drive...", Toast.LENGTH_SHORT).show();
+                 new Thread(() -> {
+                     try {
+                         DriveServiceHelper helper = new DriveServiceHelper(this, account);
+                         File data = Environment.getDataDirectory();
+                         String currentDBPath = "//data//" + getPackageName() + "//databases//TellyMobile.db";
+                         File currentDB = new File(data, currentDBPath);
+                         helper.downloadDatabaseFile(currentDB);
+                         runOnUiThread(() -> NotificationUtils.showTopNotification(this, dbHelper, "Drive Restore Successful! Restart App.", false));
+                     } catch (Exception e) {
+                         e.printStackTrace();
+                         runOnUiThread(() -> NotificationUtils.showTopNotification(this, dbHelper, "Drive Restore Failed: " + e.getMessage(), true));
+                     }
+                 }).start();
+            })
+            .setNegativeButton("CANCEL", null)
+            .show();
     }
 
     @Override

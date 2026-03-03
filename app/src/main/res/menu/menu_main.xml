@@ -26,4 +26,9 @@
         android:title="Restore DB"
         android:icon="@drawable/ic_sort"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_backup_settings"
+        android:title="Backup Settings"
+        android:icon="@drawable/ic_business"
+        app:showAsAction="never" />
 </menu>

@@ -119,6 +119,13 @@ public class VoucherActivity extends BaseActivity {
                         }
                         btnSave.setText("Update " + type);
                     }
+                    
+                    if (getIntent().getBooleanExtra("GENERATE_PDF", false)) {
+                        PdfGenerator pdfGenerator = new PdfGenerator(this);
+                        pdfGenerator.generateAndOpenPdf(createInvoiceObject());
+                        finish();
+                        return;
+                    }
                 } else {
                      NotificationUtils.showTopNotification(this, databaseHelper, "Invalid Voucher Data", true);
                 }

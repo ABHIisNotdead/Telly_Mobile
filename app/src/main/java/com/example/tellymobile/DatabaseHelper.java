@@ -292,6 +292,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // ...
 
     @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        verifySchema(db);
+    }
+    
+    @Override
     public void onCreate(SQLiteDatabase db) {
         // Companies Table
         String queryCompanies = "CREATE TABLE " + TABLE_COMPANIES + " (" +
@@ -307,7 +313,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_COMPANY_TAGLINE + " TEXT, " +
                 COLUMN_COMPANY_CST + " TEXT, " +
                 COLUMN_COMPANY_TIN + " TEXT, " +
-                COLUMN_COMPANY_VAT_TIN + " TEXT);";
+                COLUMN_COMPANY_VAT_TIN + " TEXT, " +
+                "company_pan TEXT);";
         db.execSQL(queryCompanies);
 
         String queryGroups = "CREATE TABLE " + TABLE_GROUPS + " (" +
@@ -392,6 +399,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_BUYER_ADDR + " TEXT, " +
                 COLUMN_BUYER_GST + " TEXT, " +
                 COLUMN_BUYER_STATE + " TEXT, " +
+                "buyers_order_date TEXT, " +
+                "buyer_email TEXT, " +
+                "buyer_mobile TEXT, " +
+                "consignee_email TEXT, " +
+                "consignee_mobile TEXT, " +
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0, " +
                 "bank_ledger_id INTEGER DEFAULT -1);"; // New Column for Bank Selection
         db.execSQL(queryInvoices);
@@ -488,8 +500,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_COMPANY_ID + " INTEGER DEFAULT 0);";
         db.execSQL(queryReceipts);
         
-        // Update queryVoucherCharges to include is_debit
-        db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0");
+        // Update queryVoucherCharges to include is_debit (Already in CREATE statement)
+        // db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0");
         
         insertDefaultGroups(db);
     }
@@ -1261,6 +1273,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_BUYER_ADDR, invoice.getBuyerAddress());
         cv.put(COLUMN_BUYER_GST, invoice.getBuyerGst());
         cv.put(COLUMN_BUYER_STATE, invoice.getBuyerState());
+        cv.put("buyer_email", invoice.getBuyerEmail());
+        cv.put("buyer_mobile", invoice.getBuyerMobile());
+        
+        cv.put("buyers_order_date", invoice.getBuyersOrderDate());
+        cv.put("consignee_email", invoice.getConsigneeEmail());
+        cv.put("consignee_mobile", invoice.getConsigneeMobile());
         
         cv.put("bank_ledger_id", invoice.getBankLedgerId());
         cv.put(COLUMN_COMPANY_ID, companyId);
@@ -1720,13 +1738,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     
     // --- Reporting Methods ---
-    public Cursor getCategoryWiseSales() {
+    public Cursor getCategoryWiseSales(String fromDateStr, String toDateStr) {
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT i." + COLUMN_ITEM_CATEGORY + ", SUM(ii." + COLUMN_INV_AMOUNT + ") as total " +
+        String dateFilter = "";
+        
+        // Use the format DD/MM/YYYY for filtering. We must substr or cast properly, but 
+        // string comparison works poorly on DD/MM/YYYY.
+        // It's safest to pull everything and filter in Java if the date format is non-sortable, 
+        // OR we can rely on Java entirely.
+        // Let's modify ReportsActivity to filter the cursor manually since dates in DB are DD/MM/YYYY.
+        
+        String query = "SELECT i." + COLUMN_ITEM_CATEGORY + ", SUM(ii." + COLUMN_INV_AMOUNT + ") as total, inv." + COLUMN_INVOICE_DATE + " " +
                        "FROM " + TABLE_INVOICE_ITEMS + " ii " +
                        "JOIN " + TABLE_ITEMS + " i ON ii." + COLUMN_INV_ITEM_NAME + " = i." + COLUMN_ITEM_NAME + " " +
-                       "GROUP BY i." + COLUMN_ITEM_CATEGORY;
+                       "JOIN " + TABLE_INVOICES + " inv ON ii." + COLUMN_INV_ID_FK + " = inv." + COLUMN_INVOICE_ID + " " +
+                       "GROUP BY i." + COLUMN_ITEM_CATEGORY + ", inv." + COLUMN_INVOICE_DATE;
         return db.rawQuery(query, null);
+    }
+    
+    public Cursor getCategoryWiseSales() {
+        return getCategoryWiseSales(null, null);
     }
     // --- Voucher Charges Methods ---
     public void addVoucherCharge(long voucherId, String voucherType, int ledgerId, String ledgerName, double amount, boolean isPercentage, double rate, boolean isDebit, String paymentMode) {
@@ -1902,6 +1933,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COLUMN_BUYER_ADDR, invoice.getBuyerAddress());
         cv.put(COLUMN_BUYER_GST, invoice.getBuyerGst());
         cv.put(COLUMN_BUYER_STATE, invoice.getBuyerState());
+        cv.put("buyer_email", invoice.getBuyerEmail());
+        cv.put("buyer_mobile", invoice.getBuyerMobile());
+        
+        cv.put("buyers_order_date", invoice.getBuyersOrderDate());
+        cv.put("consignee_email", invoice.getConsigneeEmail());
+        cv.put("consignee_mobile", invoice.getConsigneeMobile());
 
         db.update(TABLE_INVOICES, cv, COLUMN_INVOICE_ID + "=?", new String[]{String.valueOf(id)});
     }
@@ -2336,13 +2373,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void verifySchema(SQLiteDatabase db) {
-        // Self-Healing: Ensure columns exist before running complex reports
+        // Self-Healing: Ensure columns exist before running complex reports or saves
         try { db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_TYPE + " TEXT"); } catch (Exception e) {}
         try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_IS_DEBIT + " INTEGER DEFAULT 0"); } catch (Exception e) {}
         try { db.execSQL("ALTER TABLE " + TABLE_VOUCHER_CHARGES + " ADD COLUMN " + COLUMN_CHARGE_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
         try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_THROUGH + " TEXT"); } catch (Exception e) {}
         try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_TOTAL + " REAL"); } catch (Exception e) {}
         try { db.execSQL("ALTER TABLE " + TABLE_RECEIPTS + " ADD COLUMN " + COLUMN_RECEIPT_PAYMENT_MODE + " TEXT"); } catch (Exception e) {}
+        
+        try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN buyers_order_date TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN buyer_email TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN buyer_mobile TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN consignee_email TEXT"); } catch (Exception e) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_INVOICES + " ADD COLUMN consignee_mobile TEXT"); } catch (Exception e) {}
     }
 
     public List<TrialBalanceRow> getTrialBalance() {

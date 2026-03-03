@@ -78,6 +78,13 @@ public class InvoiceActivity extends BaseActivity {
                 loadInvoiceData(updateId);
                 btnSaveInvoice.setText("Update Invoice");
                 if (getSupportActionBar() != null) getSupportActionBar().setTitle("Update Invoice");
+                
+                if (getIntent().getBooleanExtra("GENERATE_PDF", false)) {
+                    PdfGenerator pdfGenerator = new PdfGenerator(this);
+                    pdfGenerator.generateAndOpenPdf(createInvoiceObject());
+                    finish();
+                    return;
+                }
             }
         }
     }

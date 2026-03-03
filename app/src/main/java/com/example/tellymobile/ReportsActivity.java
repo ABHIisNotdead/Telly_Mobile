@@ -10,7 +10,14 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 
+import android.app.DatePickerDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
@@ -41,6 +48,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
+import android.widget.Button;
+
 public class ReportsActivity extends BaseActivity {
 
     private BarChart barChart;
@@ -50,6 +59,14 @@ public class ReportsActivity extends BaseActivity {
     private Spinner spnReportType, spnPeriod;
     private RadioGroup rgChartType;
     private DatabaseHelper databaseHelper;
+    private RecyclerView rvTrendDetails, rvStockDetails;
+    private ReportDetailAdapter trendAdapter, stockAdapter;
+    private List<ReportDetailAdapter.ReportDetail> trendDetails, stockDetails;
+
+    private Button btnFromDate, btnToDate;
+    private Date fromDate = null;
+    private Date toDate = null;
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +76,7 @@ public class ReportsActivity extends BaseActivity {
         databaseHelper = new DatabaseHelper(this);
         initViews();
         setupSpinners();
+        setupDateFilters();
         
         rgChartType.setOnCheckedChangeListener((group, checkedId) -> updateChart());
         
@@ -89,6 +107,22 @@ public class ReportsActivity extends BaseActivity {
         spnReportType = findViewById(R.id.spnReportType);
         spnPeriod = findViewById(R.id.spnPeriod);
         rgChartType = findViewById(R.id.rgChartType);
+
+        btnFromDate = findViewById(R.id.btnFromDate);
+        btnToDate = findViewById(R.id.btnToDate);
+
+        rvTrendDetails = findViewById(R.id.rvTrendDetails);
+        rvStockDetails = findViewById(R.id.rvStockDetails);
+        rvTrendDetails.setLayoutManager(new LinearLayoutManager(this));
+        rvStockDetails.setLayoutManager(new LinearLayoutManager(this));
+        
+        trendDetails = new ArrayList<>();
+        stockDetails = new ArrayList<>();
+        trendAdapter = new ReportDetailAdapter(trendDetails);
+        stockAdapter = new ReportDetailAdapter(stockDetails);
+        
+        rvTrendDetails.setAdapter(trendAdapter);
+        rvStockDetails.setAdapter(stockAdapter);
     }
 
     private void setupSpinners() {
@@ -114,6 +148,38 @@ public class ReportsActivity extends BaseActivity {
         spnPeriod.setOnItemSelectedListener(listener);
     }
 
+    private void setupDateFilters() {
+        btnFromDate.setOnClickListener(v -> showDatePickerDialog(true));
+        btnToDate.setOnClickListener(v -> showDatePickerDialog(false));
+    }
+
+    private void showDatePickerDialog(boolean isFromDate) {
+        Calendar c = Calendar.getInstance();
+        if (isFromDate && fromDate != null) c.setTime(fromDate);
+        else if (!isFromDate && toDate != null) c.setTime(toDate);
+
+        DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            Calendar selected = Calendar.getInstance();
+            selected.set(year, month, dayOfMonth, 0, 0, 0); // Start of day
+            
+            if (!isFromDate) {
+                selected.set(Calendar.HOUR_OF_DAY, 23);
+                selected.set(Calendar.MINUTE, 59);
+                selected.set(Calendar.SECOND, 59);
+            }
+
+            if (isFromDate) {
+                fromDate = selected.getTime();
+                btnFromDate.setText("From: " + dateFormat.format(fromDate));
+            } else {
+                toDate = selected.getTime();
+                btnToDate.setText("To: " + dateFormat.format(toDate));
+            }
+            updateChart();
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
+        dialog.show();
+    }
+
     private void updateChart() {
         String type = spnReportType.getSelectedItem().toString();
         String period = spnPeriod.getSelectedItem().toString();
@@ -121,6 +187,7 @@ public class ReportsActivity extends BaseActivity {
         barChart.setVisibility(View.GONE);
         lineChart.setVisibility(View.GONE);
         pieChart.setVisibility(View.GONE);
+        rvTrendDetails.setVisibility(View.GONE);
         spnPeriod.setVisibility(View.VISIBLE);
         rgChartType.setVisibility(View.VISIBLE);
 
@@ -140,6 +207,7 @@ public class ReportsActivity extends BaseActivity {
         List<String> labels = new ArrayList<>();
         Cursor cursor = databaseHelper.getItemStockSummary();
         
+        stockDetails.clear();
         if (cursor != null) {
             int i = 0;
             while (cursor.moveToNext()) {
@@ -149,14 +217,18 @@ public class ReportsActivity extends BaseActivity {
                 if (stock != 0) {
                     entries.add(new BarEntry(i, stock));
                     labels.add(name);
+                    stockDetails.add(new ReportDetailAdapter.ReportDetail(name, String.format(Locale.US, "%.0f", stock)));
                     i++;
                 }
             }
             cursor.close();
         }
+        stockAdapter.notifyDataSetChanged();
+        rvStockDetails.setVisibility(stockDetails.isEmpty() ? View.GONE : View.VISIBLE);
         
         BarDataSet dataSet = new BarDataSet(entries, "Current Stock Quantity");
-        dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        int[] chartColors = new int[]{Color.parseColor("#3F51B5"), Color.parseColor("#4CAF50"), Color.parseColor("#FF9800"), Color.parseColor("#E91E63"), Color.parseColor("#00BCD4")};
+        dataSet.setColors(chartColors);
         dataSet.setValueTextColor(Color.BLACK);
         dataSet.setValueTextSize(12f);
         
@@ -192,19 +264,52 @@ public class ReportsActivity extends BaseActivity {
         List<PieEntry> entries = new ArrayList<>();
         Cursor cursor = databaseHelper.getCategoryWiseSales();
 
+        trendDetails.clear();
+        SimpleDateFormat inputFormat1 = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
+        SimpleDateFormat inputFormat2 = new SimpleDateFormat("dd-MM-yyyy", Locale.US); 
+        
+        Map<String, Float> categoryTotals = new HashMap<>();
+
         if (cursor != null) {
+            int categoryIdx = cursor.getColumnIndexOrThrow("category");
+            int totalIdx = cursor.getColumnIndexOrThrow("total");
+            int dateIdx = cursor.getColumnIndexOrThrow("date");
+
             while (cursor.moveToNext()) {
-                String category = cursor.getString(0);
-                float amount = cursor.getFloat(1);
+                String category = cursor.getString(categoryIdx);
+                float amount = cursor.getFloat(totalIdx);
+                String dateStr = cursor.getString(dateIdx);
+                
+                Date date = null;
+                try {
+                    date = inputFormat1.parse(dateStr);
+                } catch (ParseException e) {
+                     try { date = inputFormat2.parse(dateStr); } catch (ParseException e2) {}
+                }
+                
+                if (date != null) {
+                    if (fromDate != null && date.before(fromDate)) continue;
+                    if (toDate != null && date.after(toDate)) continue;
+                }
+
                  // Handle null category
                 if (category == null || category.isEmpty()) category = "Uncategorized";
-                entries.add(new PieEntry(amount, category));
+                
+                categoryTotals.put(category, categoryTotals.getOrDefault(category, 0f) + amount);
             }
             cursor.close();
         }
+        
+        for (Map.Entry<String, Float> entry : categoryTotals.entrySet()) {
+            entries.add(new PieEntry(entry.getValue(), entry.getKey()));
+            trendDetails.add(new ReportDetailAdapter.ReportDetail(entry.getKey(), String.format(Locale.US, "₹%.2f", entry.getValue())));
+        }
+        trendAdapter.notifyDataSetChanged();
+        rvTrendDetails.setVisibility(trendDetails.isEmpty() ? View.GONE : View.VISIBLE);
 
         PieDataSet dataSet = new PieDataSet(entries, "Sales Distribution");
-        dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        int[] chartColors = new int[]{Color.parseColor("#3F51B5"), Color.parseColor("#4CAF50"), Color.parseColor("#FF9800"), Color.parseColor("#E91E63"), Color.parseColor("#00BCD4")};
+        dataSet.setColors(chartColors);
         dataSet.setValueTextColor(Color.WHITE);
         dataSet.setValueTextSize(14f);
         
@@ -235,7 +340,14 @@ public class ReportsActivity extends BaseActivity {
         android.content.SharedPreferences prefs = getSharedPreferences("TellyPrefs", MODE_PRIVATE);
         int companyId = prefs.getInt("selected_company_id", 0);
         List<DatabaseHelper.VoucherSummary> vouchers = databaseHelper.getAllVouchers(companyId);
-        Map<String, Float> aggregatedData = new TreeMap<>(); 
+        
+        class AggData {
+            Date date;
+            String label;
+            float amount;
+            AggData(Date d, String l, float a) { date = d; label = l; amount = a; }
+        }
+        Map<String, AggData> tempMap = new HashMap<>(); 
         SimpleDateFormat inputFormat1 = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
         SimpleDateFormat inputFormat2 = new SimpleDateFormat("dd-MM-yyyy", Locale.US); 
         
@@ -255,14 +367,34 @@ public class ReportsActivity extends BaseActivity {
             }
             
             if (date != null) {
+                if (fromDate != null && date.before(fromDate)) continue;
+                if (toDate != null && date.after(toDate)) continue;
+
                 String key = "";
                 if (period.equals("Daily")) key = dailyFmt.format(date);
                 else if (period.equals("Monthly")) key = monthlyFmt.format(date);
                 else key = yearlyFmt.format(date);
                 
-                aggregatedData.put(key, aggregatedData.getOrDefault(key, 0f) + (float)v.amount);
+                if (tempMap.containsKey(key)) {
+                    AggData ad = tempMap.get(key);
+                    ad.amount += (float) v.amount;
+                } else {
+                    tempMap.put(key, new AggData(date, key, (float) v.amount));
+                }
             }
         }
+        
+        List<AggData> aggList = new ArrayList<>(tempMap.values());
+        Collections.sort(aggList, new Comparator<AggData>() {
+            public int compare(AggData o1, AggData o2) {
+                return o1.date.compareTo(o2.date);
+            }
+        });
+        
+        Map<String, Float> aggregatedData = new LinkedHashMap<>();
+        for (AggData ad : aggList) aggregatedData.put(ad.label, ad.amount);
+
+        trendDetails.clear();
 
         List<String> labels = new ArrayList<>();
         int i = 0;
@@ -272,11 +404,19 @@ public class ReportsActivity extends BaseActivity {
             for (Map.Entry<String, Float> entry : aggregatedData.entrySet()) {
                 entries.add(new BarEntry(i, entry.getValue()));
                 labels.add(entry.getKey());
+                trendDetails.add(new ReportDetailAdapter.ReportDetail(entry.getKey(), String.format(Locale.US, "₹%.2f", entry.getValue())));
                 i++;
             }
+            trendAdapter.notifyDataSetChanged();
+            rvTrendDetails.setVisibility(trendDetails.isEmpty() ? View.GONE : View.VISIBLE);
+            
             BarDataSet dataSet = new BarDataSet(entries, type);
-            // Use Telly Mobile Theme Colors if possible, else Material
-            dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+            // Use Telly Mobile Theme Colors
+            if (type.contains("Sales")) {
+                dataSet.setColor(Color.parseColor("#4CAF50")); // Green
+            } else {
+                dataSet.setColor(Color.parseColor("#F44336")); // Red for purchase
+            }
             dataSet.setValueTextColor(Color.BLACK);
             dataSet.setValueTextSize(12f);
             
@@ -296,10 +436,20 @@ public class ReportsActivity extends BaseActivity {
             for (Map.Entry<String, Float> entry : aggregatedData.entrySet()) {
                 entries.add(new Entry(i, entry.getValue()));
                 labels.add(entry.getKey());
+                trendDetails.add(new ReportDetailAdapter.ReportDetail(entry.getKey(), String.format(Locale.US, "₹%.2f", entry.getValue())));
                 i++;
             }
+            trendAdapter.notifyDataSetChanged();
+            rvTrendDetails.setVisibility(trendDetails.isEmpty() ? View.GONE : View.VISIBLE);
+            
             LineDataSet dataSet = new LineDataSet(entries, type);
-            dataSet.setColor(Color.BLUE); // Primary Color
+            if (type.contains("Sales")) {
+                dataSet.setColor(Color.parseColor("#4CAF50")); // Green
+                dataSet.setFillColor(Color.parseColor("#4CAF50"));
+            } else {
+                dataSet.setColor(Color.parseColor("#F44336"));
+                dataSet.setFillColor(Color.parseColor("#F44336"));
+            }
             dataSet.setCircleColor(Color.RED);
             dataSet.setLineWidth(3f);
             dataSet.setCircleRadius(5f);
@@ -307,7 +457,6 @@ public class ReportsActivity extends BaseActivity {
             dataSet.setValueTextSize(12f);
             dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER); // Smooth curves
             dataSet.setDrawFilled(true);
-            dataSet.setFillColor(Color.CYAN);
             dataSet.setFillAlpha(50);
             
             LineData lineData = new LineData(dataSet);

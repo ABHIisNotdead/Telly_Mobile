@@ -22,6 +22,7 @@ public class DayBookAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onItemClick(DatabaseHelper.VoucherSummary voucher);
         void onEditClick(DatabaseHelper.VoucherSummary voucher);
         void onDeleteClick(DatabaseHelper.VoucherSummary voucher);
+        void onViewPdfClick(DatabaseHelper.VoucherSummary voucher);
     }
 
     public DayBookAdapter(List<Object> list, OnItemClickListener listener) {
@@ -76,7 +77,7 @@ public class DayBookAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     public static class VoucherViewHolder extends RecyclerView.ViewHolder {
         TextView tvType, tvDate, tvParty, tvAmount, tvNo;
-        android.widget.Button btnEdit, btnDelete;
+        android.widget.Button btnEdit, btnDelete, btnViewPdf;
 
         public VoucherViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -87,6 +88,7 @@ public class DayBookAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvNo = itemView.findViewById(R.id.tvVoucherNo);
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnDelete = itemView.findViewById(R.id.btnDelete);
+            btnViewPdf = itemView.findViewById(R.id.btnViewPdf);
         }
 
         public void bind(final DatabaseHelper.VoucherSummary voucher, final OnItemClickListener listener) {
@@ -108,6 +110,7 @@ public class DayBookAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             itemView.setOnClickListener(v -> listener.onItemClick(voucher));
             btnEdit.setOnClickListener(v -> listener.onEditClick(voucher));
             btnDelete.setOnClickListener(v -> listener.onDeleteClick(voucher));
+            btnViewPdf.setOnClickListener(v -> listener.onViewPdfClick(voucher));
         }
     }
 }

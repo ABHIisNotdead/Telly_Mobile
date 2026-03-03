@@ -191,10 +191,10 @@ public class PdfGenerator {
                             if (rh <= 0) rh = 15f;
                             mergedHeight += rh;
                         }
-                        drawCell(canvas, cell, currentX, currentY, mergedWidth, mergedHeight);
+                        drawCell(canvas, cell, currentX, currentY, mergedWidth, mergedHeight, merge);
                     }
                 } else {
-                    drawCell(canvas, cell, currentX, currentY, cellWidth, rowHeight);
+                    drawCell(canvas, cell, currentX, currentY, cellWidth, rowHeight, null);
                 }
                 
                 currentX += cellWidth;
@@ -229,38 +229,75 @@ public class PdfGenerator {
         return null;
     }
     
-    private void drawCell(Canvas canvas, Cell cell, float x, float y, float w, float h) {
+    private void drawCell(Canvas canvas, Cell cell, float x, float y, float w, float h, CellRangeAddress merge) {
         if (cell == null) return;
         
         CellStyle style = cell.getCellStyle();
         
-        // Background
-        if (style.getFillForegroundColor() != 64 || style.getFillPattern() != FillPatternType.NO_FILL) { 
-             Paint bgPaint = new Paint();
-             bgPaint.setColor(0xFFF2F2F2); // Default to light gray for headers/filled areas
-             bgPaint.setStyle(Paint.Style.FILL);
-             canvas.drawRect(x, y, x + w, y + h, bgPaint);
-        }
+        // Background (Currently disabled to match Excel template transparency)
+        // if (style.getFillPattern() == FillPatternType.SOLID_FOREGROUND) {
+        //      Paint bgPaint = new Paint();
+        //      bgPaint.setColor(0xFFF2F2F2); 
+        //      bgPaint.setStyle(Paint.Style.FILL);
+        //      canvas.drawRect(x, y, x + w, y + h, bgPaint);
+        // }
 
         // Borders - Use local paint for thread safety and dynamic weight
         Paint borderPaint = new Paint();
         borderPaint.setColor(Color.BLACK);
         borderPaint.setStyle(Paint.Style.STROKE);
 
-        if (style.getBorderTop() != BorderStyle.NONE) {
-            borderPaint.setStrokeWidth(getBorderWidth(style.getBorderTop()));
+        BorderStyle top = style.getBorderTop();
+        BorderStyle bottom = style.getBorderBottom();
+        BorderStyle left = style.getBorderLeft();
+        BorderStyle right = style.getBorderRight();
+
+        if (merge != null && cell.getSheet() != null) {
+            Sheet s = cell.getSheet();
+            // check top border from top row
+            for (int c = merge.getFirstColumn(); c <= merge.getLastColumn(); c++) {
+                Row r = s.getRow(merge.getFirstRow());
+                if (r != null && r.getCell(c) != null && r.getCell(c).getCellStyle() != null && r.getCell(c).getCellStyle().getBorderTop() != BorderStyle.NONE) {
+                    top = r.getCell(c).getCellStyle().getBorderTop(); break;
+                }
+            }
+            // check bottom border from bottom row
+            for (int c = merge.getFirstColumn(); c <= merge.getLastColumn(); c++) {
+                Row r = s.getRow(merge.getLastRow());
+                if (r != null && r.getCell(c) != null && r.getCell(c).getCellStyle() != null && r.getCell(c).getCellStyle().getBorderBottom() != BorderStyle.NONE) {
+                    bottom = r.getCell(c).getCellStyle().getBorderBottom(); break;
+                }
+            }
+            // check left border from left col
+            for (int r = merge.getFirstRow(); r <= merge.getLastRow(); r++) {
+                Row rowObj = s.getRow(r);
+                if (rowObj != null && rowObj.getCell(merge.getFirstColumn()) != null && rowObj.getCell(merge.getFirstColumn()).getCellStyle() != null && rowObj.getCell(merge.getFirstColumn()).getCellStyle().getBorderLeft() != BorderStyle.NONE) {
+                    left = rowObj.getCell(merge.getFirstColumn()).getCellStyle().getBorderLeft(); break;
+                }
+            }
+            // check right border from right col
+            for (int r = merge.getFirstRow(); r <= merge.getLastRow(); r++) {
+                Row rowObj = s.getRow(r);
+                if (rowObj != null && rowObj.getCell(merge.getLastColumn()) != null && rowObj.getCell(merge.getLastColumn()).getCellStyle() != null && rowObj.getCell(merge.getLastColumn()).getCellStyle().getBorderRight() != BorderStyle.NONE) {
+                    right = rowObj.getCell(merge.getLastColumn()).getCellStyle().getBorderRight(); break;
+                }
+            }
+        }
+
+        if (top != BorderStyle.NONE) {
+            borderPaint.setStrokeWidth(getBorderWidth(top));
             canvas.drawLine(x, y, x + w, y, borderPaint);
         }
-        if (style.getBorderBottom() != BorderStyle.NONE) {
-            borderPaint.setStrokeWidth(getBorderWidth(style.getBorderBottom()));
+        if (bottom != BorderStyle.NONE) {
+            borderPaint.setStrokeWidth(getBorderWidth(bottom));
             canvas.drawLine(x, y + h, x + w, y + h, borderPaint);
         }
-        if (style.getBorderLeft() != BorderStyle.NONE) {
-            borderPaint.setStrokeWidth(getBorderWidth(style.getBorderLeft()));
+        if (left != BorderStyle.NONE) {
+            borderPaint.setStrokeWidth(getBorderWidth(left));
             canvas.drawLine(x, y, x, y + h, borderPaint);
         }
-        if (style.getBorderRight() != BorderStyle.NONE) {
-            borderPaint.setStrokeWidth(getBorderWidth(style.getBorderRight()));
+        if (right != BorderStyle.NONE) {
+            borderPaint.setStrokeWidth(getBorderWidth(right));
             canvas.drawLine(x + w, y, x + w, y + h, borderPaint);
         }
 

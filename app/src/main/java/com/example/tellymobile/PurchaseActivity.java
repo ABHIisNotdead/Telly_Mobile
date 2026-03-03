@@ -50,6 +50,13 @@ public class PurchaseActivity extends BaseActivity {
                 loadPurchaseData(updateId);
                 btnSavePurchase.setText("Update Purchase");
                 if (getSupportActionBar() != null) getSupportActionBar().setTitle("Update Purchase");
+                
+                if (getIntent().getBooleanExtra("GENERATE_PDF", false)) {
+                    PdfGenerator pdfGenerator = new PdfGenerator(this);
+                    pdfGenerator.generateAndOpenPdf(createInvoiceObject());
+                    finish();
+                    return;
+                }
             }
         }
     }

@@ -62,6 +62,8 @@ public class DayBookPage extends BaseActivity {
             else if (checkedId == R.id.chipPurchase) filterType = "Purchase";
             else if (checkedId == R.id.chipPayment) filterType = "Payment";
             else if (checkedId == R.id.chipReceipt) filterType = "Receipt";
+            else if (checkedId == R.id.chipJournal) filterType = "Journal";
+            else if (checkedId == R.id.chipContra) filterType = "Contra";
             applyFiltersAndSort();
         });
     }
@@ -181,6 +183,23 @@ public class DayBookPage extends BaseActivity {
                         .setNegativeButton("Cancel", null)
                         .show();
                 }
+
+                @Override
+                public void onViewPdfClick(DatabaseHelper.VoucherSummary voucher) {
+                    Intent intent;
+                    if (voucher.type.equals("Sales")) {
+                        intent = new Intent(DayBookPage.this, InvoiceActivity.class);
+                    } else if (voucher.type.equals("Purchase")) {
+                        intent = new Intent(DayBookPage.this, PurchaseActivity.class);
+                    } else {
+                        intent = new Intent(DayBookPage.this, VoucherActivity.class);
+                        intent.putExtra("TYPE", voucher.type);
+                    }
+                    intent.putExtra("MODE", "EDIT");
+                    intent.putExtra("ID", voucher.id);
+                    intent.putExtra("GENERATE_PDF", true);
+                    startActivity(intent);
+                }
             });
             recyclerView.setAdapter(adapter);
         } else {
@@ -260,7 +279,7 @@ public class DayBookPage extends BaseActivity {
         Button btnApply = view.findViewById(R.id.btnApply);
         
         // Type Spinner
-        String[] types = {"All", "Sales", "Purchase", "Payment", "Receipt"};
+        String[] types = {"All", "Sales", "Purchase", "Payment", "Receipt", "Journal", "Contra"};
         android.widget.ArrayAdapter<String> typeAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_item, types);
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerType.setAdapter(typeAdapter);
@@ -268,6 +287,8 @@ public class DayBookPage extends BaseActivity {
         else if (filterType.equals("Purchase")) spinnerType.setSelection(2);
         else if (filterType.equals("Payment")) spinnerType.setSelection(3);
         else if (filterType.equals("Receipt")) spinnerType.setSelection(4);
+        else if (filterType.equals("Journal")) spinnerType.setSelection(5);
+        else if (filterType.equals("Contra")) spinnerType.setSelection(6);
         
         // Ledger AutoComplete
         List<String> ledgers = databaseHelper.getAllLedgerNames();
