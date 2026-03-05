@@ -319,6 +319,10 @@ public class ExcelGenerator {
         data.put("{{COMPANY_NAME}}", companyData.getOrDefault("NAME", ""));
         data.put("{{COMPANY_ADDRESS}}", companyData.getOrDefault("ADDRESS", ""));
         data.put("{{COMPANY_PAN}}", companyData.getOrDefault("PAN", ""));
+        // New Company Contact Fields
+        data.put("{{COMPANY_MOBILE}}", companyData.getOrDefault("MOBILE", ""));
+        data.put("{{COMPANY_PHONE2}}", companyData.getOrDefault("PHONE2", "")); // Just in case it's used
+        data.put("{{COMPANY_EMAIL}}", companyData.getOrDefault("EMAIL", ""));
         
         data.put("{{BUYER_EMAIL}}", checkNull(invoice.getBuyerEmail()));
         data.put("{{BUYER_MOBILE}}", checkNull(invoice.getBuyerMobile()));
@@ -749,6 +753,7 @@ public class ExcelGenerator {
             map.put("GST", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_GST))));
             map.put("LOGO", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_LOGO))));
             map.put("MOBILE", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_MOBILE))));
+            try { map.put("PHONE2", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_PHONE2)))); } catch (Exception e) {}
             map.put("EMAIL", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_EMAIL))));
             map.put("STATE", checkNull(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPANY_STATE))));
             try {
