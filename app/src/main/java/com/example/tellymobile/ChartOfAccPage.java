@@ -100,7 +100,7 @@ public class ChartOfAccPage extends BaseActivity {
         }
         
         // 4. All Items (Uncategorized or General View if needed, but above covers categorized)
-        // If user wants specific "All Items", we could add that too.
+
     }
     
     // Internal Adapter Class

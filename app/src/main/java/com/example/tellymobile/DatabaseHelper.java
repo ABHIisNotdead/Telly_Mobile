@@ -1309,12 +1309,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public long addPayment(String voucherNo, String date, String partyName, double totalAmount, String throughLedger, String narration, int companyId) {
-        // Warning: The original addPayment didn't have partyName, it seems it was stored in VoucherCharges?
-        // But for this mismatch, we will ignore partyName or append to narration if needed, 
-        // OR better, we use the existing addPayment which expects (No, Date, Through, Total, Narration, Company)
-        // The error says: required: String,String,String,double,String,int; found: String,String,String,double,String,String,int
-        // So we need an overload or fix the call. 
-        // Let's overload to match the call in VoucherActivity
+
         return addPayment(voucherNo, date, throughLedger, totalAmount, narration + " (Party: " + partyName + ")", companyId);
     } 
 
@@ -2024,11 +2019,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             table = TABLE_JOURNALS;
             column = COLUMN_JOURNAL_NO;
         } else if (type.equals("Contra")) {
-            // Contra usually shares numbering with Journal or has its own. Assuming Journal for now or sharing? 
-            // Better to have separate or same. Let's assume separate table or same? 
-            // In onCreate, I don't see TABLE_CONTRA. 
-            // Wait, looking at saveVoucher: if type is Journal OR Contra, it calls addJournal. 
-            // So Contra uses TABLE_JOURNALS.
+            // Contra usually shares numbering with Journal or has its own. Assuming Journal for now or sharing?
             table = TABLE_JOURNALS;
             column = COLUMN_JOURNAL_NO;
         } else if (type.equals("Receipt")) {
